@@ -1,0 +1,15 @@
+二、sys模块的变量
+变量	描述
+sys.path	模块搜索路径 path[0] 是当前脚本程序的路径名，否则为 ''
+sys.modules	已加载模块的字典
+sys.version	版本信息字符串
+sys.version_info	版本信息的命名元组
+sys.platform	操作系统平台名称信息
+sys.argv	命令行参数 argv[0] 代表当前脚本程序路径名
+sys.copyright	获得Python版权相关的信息
+sys.builtin_module_names	获得Python内建模块的名称（字符串元组）
+标准输入输出时会用到	 
+sys.stdin	标准输入文件对象，多用于input()
+sys.stdout	标准输出文件对象,多用于print()
+sys.stderr	标准错误输出文件对象, 用于输出错误信息
+————————————————

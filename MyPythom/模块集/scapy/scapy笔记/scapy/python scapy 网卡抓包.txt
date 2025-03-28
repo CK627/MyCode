@@ -1,0 +1,21 @@
+python scapy 网卡抓包
+首先需要安装scapy包
+
+from scapy.all import *
+
+def pack_callback(packet):
+    print packet.show()
+    if packet['Ether'].payload:
+        print packet['Ether'].src
+        print packet['Ether'].dst
+        print packet['Ether'].type
+
+    if packet['ARP'].payload:
+        print packet['ARP'].psrc
+        print packet['ARP'].pdst
+        print packet['ARP'].hwsrc
+        print packet['ARP'].hwdst
+
+filterstr="arp"
+
+sniff(filter=filterstr,prn=pack_callback, iface='enp7s0f1', count=0)

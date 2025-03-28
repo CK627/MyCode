@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en"></html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅游网会员注册</title>
+</head>
+<body>
+    <form autocomplete="off">
+        <table border="1" align="center" cellspcing="0">
+            <tr>
+                <td colspan="2"><img src="./images/header.jpg" width="500"></td>
+            </tr>
+            <tr>
+                <td colspan="2">旅游网会员注册</td>
+            </tr>
+            <tr>
+                <td align="center">用户名:</td>
+                <td><input type="text" placeholder="" autofocus required></td>
+            </tr>
+            <tr>
+                <td align="center">密码:</td>
+                <td><input type="password" placeholder="" required></td>
+            </tr>
+            <tr>
+                <td align="center">确认密码:</td>
+                <td><input type="password" placeholder="" required></td>
+            </tr>
+            <tr>
+                <td align="center">性别:</td>
+                <td>
+                    <input type="radio" name="gender" value="male" required> 男
+                    <input type="radio" name="gender" value="female"> 女
+                </td>
+            </tr>
+            <tr>
+                <td align="center">邮箱:</td>
+                <td><input type="email" placeholder="" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" required></td>
+            </tr>
+            <tr>
+                <td align="center">电话:</td>
+                <td><input type="tel" placeholder="" pattern="^1[3-9]\d{9}$" required ></td>
+            </tr>
+            <tr>
+                <td align="center">年龄:</td>
+                <td><input type="number" placeholder="" min="16" max="68" required></td>
+            </tr>
+            <tr>
+                <td align="center">专业:</td>
+                <td>
+                    <input list="majors" placeholder="maths" required>
+                    <datalist id="majors">
+                        <option value="计算机科学与技术">
+                        <option value="软件工程">
+                        <option value="电子信息工程">
+                        <option value="机械设计制造及其自动化">
+                        <option value="会计学">
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">出生日期:</td>
+                <td>
+                    <input type="date" placeholder=" 年 -月-日" required>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">注册周数:</td>
+                <td>
+                    <input type="text" placeholder="---- 年第 -- 周" pattern="\d{4}年第\d{1,2}周" required>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">身份证号:</td>
+                <td><input type="text" placeholder="请输入身份证号" pattern="(^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[0-9Xx]$)|(^[1-9]\d{5}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}$)" required autocomplete="off"></td>
+            </tr>
+            <tr>
+                <td align="center">您选择的颜色:</td>
+                <td>
+                    <input type="color" id="favoriteColor" name="favoriteColor" value="#ff0000">
+                </td>
+            </tr>
+            <tr>
+                <td align="center">英语等级:</td>
+                <td>
+                    <input type="range" id="englishLevel" name="englishLevel" min="1" max="10" value="1">
+                    <span id="englishLevelValue">4</span>
+                    <script>
+                        const slider = document.getElementById('englishLevel');
+                        const output = document.getElementById('englishLevelValue');
+                        output.innerHTML = slider.value;
+                        slider.oninput = function() {
+                            output.innerHTML = this.value;
+                        }
+                    </script>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">爱好:</td>
+                <td>
+                    <input type="checkbox" name="hobbies" value="outdoor"> 户外
+                    <input type="checkbox" name="hobbies" value="music"> 音乐
+                    <input type="checkbox" name="hobbies" value="shopping"> 购物
+                    <input type="checkbox" name="hobbies" value="other"> 其他
+                </td>
+            </tr>
+            <tr>
+                <td align="center">所在地:</td>
+                <td>
+                    <select name="location">
+                        <option value="Beijing">北京</option>
+                        <option value="Shanghai">上海</option>
+                        <option value="Guangzhou">浙江</option>
+                        <option value="Shenzhen">四川</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">备注:</td>
+                <td>
+                    <textarea rows="3" placeholder="" autocomplete="off"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">请多重选择文件:</td>
+                <td>
+                    <input type="file" name="uploadFile" multiple>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">
+                    <input type="submit" value="提交">
+                </td>
+                <td align="center">
+                    <input type="reset" value="重置">
+                </td>
+            </tr>
+        </table>
+    </form>
+</body>
+</html>

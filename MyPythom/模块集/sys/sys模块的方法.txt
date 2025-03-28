@@ -1,0 +1,6 @@
+函数名	描述
+sys.exit([arg])	退出程序，正常退出时sys.exit(0)
+sys.getrecursionlimit()	 
+sys.getrecursionlimit()	得到递归嵌套层次限制（栈的深度）
+sys.setrecursionlimit(n)	得到和修改递归嵌套层次限制（栈的深度）
+————————————————

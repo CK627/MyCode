@@ -1,0 +1,39 @@
+optparse，是一个更够让程序设计人员轻松设计出简单明了、易于使用、符合标准的Unix命令例程式的Python模块。生成使用和帮助信息
+
+       首先你必须导入该类，并创建一个OptionParser对象，然后再使用parser.add_option(...)待定义命令行参数，及其帮助文档。
+
+        每个命令行参数就是由参数名字符串和参数属性组成的。如 -f 或者 file 分别是长短参数名:
+parser.add_option("-f","--file", ...)
+当你将所有的命令行参数都定义好了的时候，我们需要调用parse_args()方法赖际熙add_option()函数依次传入的参数：
+options,args = parser.parser_args()
+ options 是一个字典，其key字典中的关键字可能会是是我们所有的add_option()函数中的dest参数值，其对应的value值，是命令行输入的对应的add_option()函数的参数值。
+
+        args,它是一个由 positional arguments 组成的列表。
+
+        为了更好的理解，我们看下面一段代码。
+1.from optparse import OptionParser
+2.optParser = OptionParser()
+3.optParser.add_option('-f','--file',action = 'store',type ="string", dest- 'filename'）
+4.optParser.add_option('-v','--vison',action="store_false", dest="verbose",
+5.		  default='hello'，help="make lots of noise[default]")
+6.#optParser.parse_args() 剖析并返回一个字典和列表
+7.#字典中的关键字是我们所有的add_option()函数中的dest参数值
+8.#而对应的value值，是add_option()函数中的dest参数值
+9.#由用户传入的optParser.parse_args()的参数
+10.fakeArgs=['-f', 'file.txt', '-v', 'how are you', 'arg1', 'arg2']
+11.option, args = optParser.parse_args()
+12.op, ar = optParser.parse_args(fakeArgs)
+13.print("option: ",option)
+14.print("args: ",args)
+15.print("op: ",op)
+16.print("ar: ",ar)
+输出：
+1.option: {'filename':None,'verbose':'hello'}
+args:[ ]
+op:{'filename':'file.txt','verbose':False}
+ar:['how are you','arg1','arg2']
+     注意：我们对optParser.parser_args()函数传入参数列表和，没有传入参数列表的区别。
+在这里我么的fakeArgs参数列表代替了我们在命令行输入的参数。
+如果我们在shell中运行这个代码，会如此传参：
+{root@server15~]# ./optionparser -f file.txt -v 'how are you' arg1 arg2           (与我们在parser_args()函数中传入的fakeArgs参数列表一样)
+原文链接：https://blog.csdn.net/m0_37717595/article/details/80603884

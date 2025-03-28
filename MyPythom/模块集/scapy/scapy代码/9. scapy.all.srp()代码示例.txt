@@ -1,0 +1,507 @@
+示例1: scan_ips
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def scan_ips(interface='wlan0', ips='192.168.1.0/24'):
+    """a simple ARP scan with Scapy"""
+    try:
+        print('[*] Start to scan')
+        conf.verb = 0 # hide all verbose of scapy
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        arp = ARP(pdst = ips)
+        answer, unanswered = srp(ether/arp, timeout = 2, iface = interface, inter = 0.1)
+
+        for sent, received in answer:
+            print(received.summary())
+
+    except KeyboardInterrupt:
+        print('[*] User requested Shutdown')
+        print('[*] Quitting...')
+        sys.exit(1) 
+开发者ID:madeindjs，项目名称:Wifi_BruteForce，代码行数:18，代码来源:network_scanner.py
+
+
+
+ 
+示例2: SCAN_NETWORK
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def SCAN_NETWORK(MAC_ADDRESS, IP_RANGE, INTERFACE):
+    print("[+] Scanning network ... \n")
+    start_time = datetime.now() 
+    conf.verb = 0
+    if MAC_ADDRESS == "None":
+        ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst = IP_RANGE), timeout = 2,   iface=INTERFACE,inter=0.1)
+    else:
+        ans, unans = srp(Ether(src=MAC_ADDRESS, dst="ff:ff:ff:ff:ff:ff")/ARP(pdst = IP_RANGE), timeout = 2,   iface=INTERFACE,inter=0.1)
+    for snd,rcv in ans:
+        try:
+            hostname = socket.gethostbyaddr(str(rcv[ARP].psrc))[0]
+            print(rcv.sprintf(r"%ARP.psrc% ["+color.CYAN+color.UNDERLINE+hostname+color.END+"] - %Ether.src%"))
+        except: 
+            ERROR_print("Error occured while scanning!")
+            MAIN(IP_RANGE, SPOOF_MAC, INTERFACE)
+    stop_time = datetime.now()
+    total_time = stop_time - start_time 
+    print("\n")
+    print("[*] Module Completed!")
+    print("[*] Scan Duration: %s \n" %(total_time)) 
+开发者ID:DeaDHackS，项目名称:WiFiSpy，代码行数:22，代码来源:arp_scanner.py
+
+
+示例3: get_kube_dns_ip_mac
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def get_kube_dns_ip_mac(self):
+        config = get_config()
+        kubedns_svc_ip = self.extract_nameserver_ip()
+
+        # getting actual pod ip of kube-dns service, by comparing the src mac of a dns response and arp scanning.
+        dns_info_res = srp1(
+            Ether() / IP(dst=kubedns_svc_ip) / UDP(dport=53) / DNS(rd=1, qd=DNSQR()),
+            verbose=0,
+            timeout=config.network_timeout,
+        )
+        kubedns_pod_mac = dns_info_res.src
+        self_ip = dns_info_res[IP].dst
+
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+        for _, response in arp_responses:
+            if response[Ether].src == kubedns_pod_mac:
+                return response[ARP].psrc, response.src 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:21，代码来源:dns.py
+
+
+
+ 
+示例4: scan
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def scan(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+
+    clients_list = []
+    for element in answered_list:
+        client_dict = {"ip": element[1].psrc, "mac": element[1].hwsrc}
+        clients_list.append(client_dict)
+    return clients_list 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:14，代码来源:network_scanner.py
+
+
+示例5: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def get_mac(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+    return answered_list[0][1].hwsrc
+
+
+# Change mac address in arp table 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:12，代码来源:arp_spoofing.py
+
+
+
+ 
+示例6: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def get_mac(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+    return answered_list[0][1].hwsrc 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:9，代码来源:arp_spoof_detector.py
+
+
+示例7: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def get_mac(ip, interface):
+    """Returns the according MAC address for the provided IP address.
+
+    Args:
+        ip (str): IP address used to get MAC address.
+        interface (str): Interface used to send ARP request.
+
+    Results:
+        According MAC address as string (11:22:33:44:55:66)
+        or None if no answer has been received.
+    """
+    ans, unans = srp(Ether(dst=ETHER_BROADCAST) / ARP(pdst=ip), timeout=2, iface=interface, inter=0.1, verbose=0)
+    for snd, rcv in ans:
+        return rcv.sprintf(r"%Ether.src%") 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:16，代码来源:util.py
+
+
+示例8: get_mac6
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def get_mac6(ip, interface):
+    """Returns the according MAC address for the provided IPv6 address.
+
+    Args:
+        ip (str): IPv6 address used to get MAC address.
+        interface (str): Interface used to send neighbor solicitation.
+
+    Results:
+        According MAC address as string (11:22:33:44:55:66)
+        or None if no answer has been received.
+    """
+    ans, unans = srp(Ether(dst=ETHER_BROADCAST) / IPv6(dst=ip) / ICMPv6ND_NS(tgt=ip), timeout=2, iface=interface, inter=0.1, verbose=0)
+    for snd, rcv in ans:
+        return rcv.sprintf(r"%Ether.src%") 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:16，代码来源:util.py
+
+
+示例9: getMAC
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def getMAC(self, IP, name):
+        """
+        Fetches MAC address of the selected IP
+        """
+
+        arp_packet = scapy.ARP(pdst=IP)
+        broadcast = scapy.Ether(dst='ff:ff:ff:ff:ff:ff')
+        arp_broadcast = broadcast/arp_packet
+        broadcast = scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]
+        mac_addr_str = self.capture_output(broadcast)
+        mac_addr = re.findall(r'\w\w:\w\w:\w\w:\w\w:\w\w:\w\w',
+                              mac_addr_str)[0]
+        mac_addr = str(mac_addr).strip()
+
+        colors.success('Found MAC address for {} : {} is : {}'
+                       .format(name, IP, mac_addr))
+        val = str(input('>> Enter(Y/y) to continue or enter MAC address : '))\
+            .strip()
+        if val == 'Y' or val == 'y':
+            return mac_addr
+        elif self.validateMAC(val):
+            colors.info('Setting MAC address for {} : {} : {}'
+                        .format(name, IP, val))
+            return val
+        else:
+            colors.error('Please enter a valid MAC address...')
+            self.getMAC(IP, name) 
+开发者ID:abhisharma404，项目名称:vault，代码行数:29，代码来源:arp_spoofer.py
+
+
+示例10: mac_getter
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def mac_getter(self, IP):
+
+        # Sending ARP for take the MAC address
+        ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=IP), timeout=2, iface=self.interface, inter=0.2)
+
+        for send, receive in ans:
+            return receive.sprintf(r"%Ether.src%") 
+开发者ID:ffmancera，项目名称:pentesting-multitool，代码行数:9，代码来源:mitm_utility.py
+
+
+示例11: scan
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def scan():
+    try:
+        print(colors.purple+"Interfaces:"+colors.end)
+        for iface in netifaces.interfaces():
+            print(colors.yellow+iface+colors.end)
+        interface = input("\033[1;77m[>]\033[0m Interface: ").strip(" ")
+        try:
+            ip = netifaces.ifaddresses(interface)[2][0]['addr']
+        except(ValueError, KeyError):
+            printError("Invalid interface!")
+            return
+        ips = ip+"/24"
+        printInfo("Scanning...")
+
+        start_time = datetime.now()
+
+        conf.verb = 0
+        try:
+            ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst = ips), timeout = 2,iface=interface,inter=0.1)
+        except PermissionError:
+            printError('Permission denied!')
+            return
+
+        for snd,rcv in ans:
+            print(rcv.sprintf(colors.yellow+"r%Ether.src% - %ARP.psrc%"+colors.end))
+        stop_time = datetime.now()
+        total_time = stop_time - start_time
+        printSuccess("Scan completed!")
+        printSuccess("Scan duration: "+str(total_time))
+    except KeyboardInterrupt:
+        printWarning("Network scanner terminated.") 
+开发者ID:entynetproject，项目名称:arissploit，代码行数:33，代码来源:network_scanner.py
+
+
+示例12: cmd_dhcp_discover
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def cmd_dhcp_discover(iface, timeout, verbose):
+    """Send a DHCP request and show what devices has replied.
+
+    Note: Using '-v' you can see all the options (like DNS servers) included on the responses.
+
+    \b
+    # habu.dhcp_discover
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.5:bootpc / BOOTP / DHCP
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    conf.checkIPaddr = False
+
+    hw = get_if_raw_hwaddr(conf.iface)
+
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    ip = IP(src="0.0.0.0",dst="255.255.255.255")
+    udp = UDP(sport=68,dport=67)
+    bootp = BOOTP(chaddr=hw)
+    dhcp = DHCP(options=[("message-type","discover"),"end"])
+
+    dhcp_discover = ether / ip / udp / bootp / dhcp
+
+    ans, unans = srp(dhcp_discover, multi=True, timeout=5)      # Press CTRL-C after several seconds
+
+    for _, pkt in ans:
+        if verbose:
+            print(pkt.show())
+        else:
+            print(pkt.summary()) 
+开发者ID:fportantier，项目名称:habu，代码行数:41，代码来源:cmd_dhcp_discover.py
+
+
+示例13: cmd_arp_ping
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def cmd_arp_ping(ip, iface, verbose):
+    """
+    Send ARP packets to check if a host it's alive in the local network.
+
+    Example:
+
+    \b
+    # habu.arp.ping 192.168.0.1
+    Ether / ARP is at a4:08:f5:19:17:a4 says 192.168.0.1 / Padding
+    """
+
+    if verbose:
+        logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    res, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=ip), timeout=2)
+
+    for _, pkt in res:
+        if verbose:
+            print(pkt.show())
+        else:
+            print(pkt.summary()) 
+开发者ID:fportantier，项目名称:habu，代码行数:33，代码来源:cmd_arp_ping.py
+
+
+示例14: get_mac_by_ip_s
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def get_mac_by_ip_s(ip_address, delay):
+    """try to retrieve MAC address associated with ip using Scapy library """
+    responses, _ = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=ip_address),
+                       timeout=delay, retry=10)
+    # return the MAC address from a response
+    for _, response in responses:
+        return response[Ether].src
+    return None 
+开发者ID:codepr，项目名称:creak，代码行数:10，代码来源:utils.py
+
+
+示例15: execute
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def execute(self):
+        config = get_config()
+        self_ip = sr1(IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.network_timeout)[IP].dst
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+
+        # arp enabled on cluster and more than one pod on node
+        if len(arp_responses) > 1:
+            # L3 plugin not installed
+            if not self.detect_l3_on_host(arp_responses):
+                self.publish_event(PossibleArpSpoofing()) 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:14，代码来源:arp.py
+
+
+示例16: arp_ping
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def arp_ping(self, destination):
+        """
+        The fastest way to discover hosts on a local
+        ethernet network is to use the ARP Ping method.
+
+        -- https://scapy.readthedocs.io/en/latest/usage.html#arp-ping
+
+        :param destination: Network to scan.
+        :param delay: How long to delay before starting the network scan.
+        """
+        log.info('Sending ARP ping request to {destination}'.format(**locals()))
+        # "srp" means: Send and receive packets at layer 2.
+        ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=destination), timeout=10, verbose=self.VERBOSITY)
+        return ans, unans 
+开发者ID:hiveeyes，项目名称:terkin-datalogger，代码行数:16，代码来源:terkin.py
+
+
+示例17: cmd_dhcp_starvation
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def cmd_dhcp_starvation(iface, timeout, sleeptime, verbose):
+    """Send multiple DHCP requests from forged MAC addresses to
+    fill the DHCP server leases.
+
+    When all the available network addresses are assigned, the DHCP server don't send responses.
+
+    So, some attacks, like DHCP spoofing, can be made.
+
+    \b
+    # habu.dhcp_starvation
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.6:bootpc / BOOTP / DHCP
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.7:bootpc / BOOTP / DHCP
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.8:bootpc / BOOTP / DHCP
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    conf.checkIPaddr = False
+
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    ip = IP(src="0.0.0.0",dst="255.255.255.255")
+    udp = UDP(sport=68, dport=67)
+    dhcp = DHCP(options=[("message-type","discover"),"end"])
+
+    while True:
+        bootp = BOOTP(chaddr=str(RandMAC()))
+        dhcp_discover = ether / ip / udp / bootp / dhcp
+        ans, unans = srp(dhcp_discover, timeout=1)      # Press CTRL-C after several seconds
+
+        for _, pkt in ans:
+            if verbose:
+                print(pkt.show())
+            else:
+                print(pkt.sprintf(r"%IP.src% offers %BOOTP.yiaddr%"))
+
+        sleep(sleeptime) 
+开发者ID:fportantier，项目名称:habu，代码行数:46，代码来源:cmd_dhcp_starvation.py
+
+
+示例18: cmd_gateway_find
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import srp [as 别名]
+def cmd_gateway_find(network, iface, host, tcp, dport, timeout, verbose):
+    """
+    Try to reach an external IP using any host has a router.
+
+    Useful to find routers in your network.
+
+    First, uses arping to detect alive hosts and obtain MAC addresses.
+
+    Later, create a network packet and put each MAC address as destination.
+
+    Last, print the devices that forwarded correctly the packets.
+
+    Example:
+
+    \b
+    # habu.find.gateway 192.168.0.0/24
+    192.168.0.1 a4:08:f5:19:17:a4 Sagemcom
+    192.168.0.7 b0:98:2b:5d:22:70 Sagemcom
+    192.168.0.8 b0:98:2b:5d:1f:e8 Sagemcom
+    """
+
+    if verbose:
+        logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    res, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=network), timeout=2)
+
+    neighbors = set()
+
+    for _, pkt in res:
+        neighbors.add((pkt['Ether'].src, pkt['Ether'].psrc))
+
+    for mac,ip in neighbors:
+        if tcp:
+            res, unans = srp(Ether(dst=mac)/IP(dst=host)/TCP(dport=dport), timeout=timeout)
+        else:
+            res, unans = srp(Ether(dst=mac)/IP(dst=host)/ICMP(), timeout=timeout)
+        for _,pkt in res:
+            if pkt:
+                if verbose:
+                    print(pkt.show())
+                else:
+                    print(ip, mac, conf.manufdb._get_manuf(mac)) 
+开发者ID:fportantier，项目名称:habu，代码行数:54，代码来源:cmd_gateway_find.py

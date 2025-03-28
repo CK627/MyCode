@@ -1,0 +1,958 @@
+示例1: pkt_callback
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def pkt_callback(self, pkt):
+        """
+        Proccess DNS packets
+        """
+        if self.ccname in pkt[DNS].qd.qname:
+            if pkt[DNS].qd.qname == '666.' + self.ccname + '.':
+                print(time.strftime("%Y-%m-%d %H:%M:%S ", time.gmtime())
+                      + 'DNS/PDNS:' + pkt[IP].src + ':ALARM Case Open!')
+            else:
+                text = decrypt(pkt[DNS].qd.qname.split('.')[0])
+                text = text.strip()
+                hexip = text.split(',')[-1]
+                text = text.replace(hexip, hextoip(hexip))
+                if pkt[DNS].qd.qtype == 2:
+                    text = 'DNS:' + pkt[IP].src + ':' + text
+                else:
+                    text = 'PDNS:' + pkt[IP].src + ':' + text
+                printer(self.filed, text) 
+开发者ID:ekiojp，项目名称:circo，代码行数:20，代码来源:carpa.py
+
+
+
+ 
+示例2: __init__
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def __init__(self, network_interface: str = 'eth0', quiet: bool = False) -> None:
+        """
+        Init class DnsResolver
+        :param network_interface: Network interface (example: eth0)
+        :param quiet: Quiet mode on if True, quiet mode off if False (default: False)
+        """
+
+        # Set network interface for sending DNS queries
+        self.network_interface: str = network_interface
+
+        # Set quiet mode
+        self.quiet: bool = quiet
+
+        # Get MAC, IPv4 and IPv6 addresses for network interface
+        self.your_mac_address: str = self.base.get_interface_mac_address(self.network_interface)
+        self.your_ipv4_address: str = self.base.get_interface_ip_address(self.network_interface)
+        self.your_ipv4_network: str = self.base.get_interface_network(self.network_interface)
+        self.your_ipv6_address: str = self.base.get_interface_ipv6_link_address(self.network_interface, False)
+    # endregion
+
+    # region Write resolve results to file 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:23，代码来源:dns_resolver.py
+
+
+示例3: _save_result
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _save_result(self, result: Dict[str, str]) -> None:
+        try:
+            self.results.append(result)
+            if 'NS' in result.keys():
+                self.base.print_success('Domain: ', result['Domain'], ' NS: ', result['NS'])
+            else:
+                with open(RawDnsResolver.temporary_results_filename, 'a') as temporary_file:
+                    temporary_file.write('Domain: ' + result['Domain'] +
+                                         ' IPv4 address: ' + result['IPv4 address'] +
+                                         ' IPv6 address: ' + result['IPv6 address'] + '\n')
+                if result['IPv6 address'] == '-':
+                    print(self.base.cSUCCESS + '[' + str(len(self.uniq_hosts)) + '] ' + self.base.cEND +
+                          result['Domain'] + ' - ' + result['IPv4 address'])
+                else:
+                    print(self.base.cSUCCESS + '[' + str(len(self.uniq_hosts)) + '] ' + self.base.cEND +
+                          result['Domain'] + ' - ' + result['IPv6 address'])
+        except AttributeError:
+            pass
+
+        except KeyError:
+            pass
+    # endregion
+
+    # region Parse DNS packet function 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:26，代码来源:dns_resolver.py
+
+
+
+ 
+示例4: _parse_dns_request
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _parse_dns_request(self, dns_layer) -> dict:
+        from scapy.layers.dns import DNS, DNSRR
+
+        dns_layer = cast(DNS, dns_layer)
+
+        # Each DNS request has the basic qname/qtype
+        dns_data = {
+            "qname": dns_layer.qd.qname.decode(),
+            # Get 'A/MX/NS' as string rather than number.
+            "qtype": dns_layer.qd.get_field("qtype").i2repr(dns_layer.qd, dns_layer.qd.qtype),
+        }
+
+        if dns_layer.ancount > 0 and isinstance(dns_layer.an, DNSRR):
+            resp = dns_layer.an.rdata
+            if isinstance(resp, bytes):
+                resp = resp.decode()
+            dns_data["qanswer"] = resp
+        return dns_data 
+开发者ID:yampelo，项目名称:beagle，代码行数:20，代码来源:pcap.py
+
+
+示例5: test_single_dns_resp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def test_single_dns_resp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1"))
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 53
+    assert events[0]["qname"] == "google.com."
+    assert events[0]["qanswer"] == "123.0.0.1"
+    assert events[0]["qtype"] == "A"
+    assert events[0]["event_type"] == "DNS" 
+开发者ID:yampelo，项目名称:beagle，代码行数:24，代码来源:test_pcap.py
+
+
+
+ 
+示例6: test_single_dns_query_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def test_single_dns_query_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"))
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 53
+    assert events[0]["qname"] == "google.com."
+    assert events[0]["qtype"] == "A"
+
+    assert events[0]["event_type"] == "DNS" 
+开发者ID:yampelo，项目名称:beagle，代码行数:24，代码来源:test_pcap.py
+
+
+示例7: test_multiple_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def test_multiple_packets():
+    packets = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 3
+
+    assert [e["event_type"] for e in events] == ["HTTPRequest", "DNS", "TCP"] 
+开发者ID:yampelo，项目名称:beagle，代码行数:25，代码来源:test_pcap.py
+
+
+示例8: spoof_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def spoof_packet(packet):
+    options = get_arguments()
+    dns_packet = scapy.IP(packet.get_payload())
+    if dns_packet.haslayer(scapy.DNSRR):
+        qname = dns_packet[scapy.DNSQR].qname
+        if options.website in qname:
+            dns_responce = scapy.DNSRR(rrname=qname, rdata=options.ip)
+            dns_packet[scapy.DNS].an = dns_responce
+            dns_packet[scapy.DNS].ancount = 1
+
+            del dns_packet[scapy.IP].len
+            del dns_packet[scapy.IP].chksum
+            del dns_packet[scapy.UDP].len
+            del dns_packet[scapy.UDP].chksum
+
+            packet.set_payload(str(dns_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:19，代码来源:dns_spoof.py
+
+
+示例9: proto_mapping_request
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def proto_mapping_request(protocol):
+    """Provide mapping of enum values to implementation classes."""
+    return {
+        Protocol.ALL: IP,
+        Protocol.UDP: UDP,
+        Protocol.TCP: TCP,
+        Protocol.CoAP: CoAP,
+        Protocol.mDNS: DNS,
+        Protocol.MQTT: MQTT,
+        Protocol.DTLS: DTLS,
+        Protocol.QUIC: UDP,
+        Protocol.RTSP: HTTPRequest,
+        Protocol.SSDP: HTTPRequest,
+        Protocol.HTCPCP: HTTPRequest,
+        Protocol.HTTP: HTTPRequest,
+    }[protocol] 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:18，代码来源:common_utils.py
+
+
+示例10: mdns_send_query
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def mdns_send_query(test_params, query, send_multicast=True):
+    """Send mDNS query to normal and multicast address."""
+    dns_sd_query = str(DNS(rd=1, qd=DNSQR(qname=query, qtype="PTR")))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    time.sleep(1)
+    udp_sr1(test_params, dns_sd_query)
+    if send_multicast:
+        multicast_test_params = copy.deepcopy(test_params)
+        if test_params.ip_version == 4:
+            multicast_test_params.dst_endpoint.ip_addr = DNS_SD_MULTICAST_IPV4
+            sock.sendto(
+                str(dns_sd_query),
+                (DNS_SD_MULTICAST_IPV4, multicast_test_params.dst_endpoint.port),
+            )
+        elif test_params.ip_version == 6:
+            multicast_test_params.dst_endpoint.ip_addr = DNS_SD_MULTICAST_IPV6
+            sock.sendto(
+                str(dns_sd_query),
+                (DNS_SD_MULTICAST_IPV6, multicast_test_params.dst_endpoint.port),
+            )
+        else:
+            return 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:24，代码来源:mdns_utils.py
+
+
+示例11: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def run(iface, local_ip, sniff_filter, spoof_domains):
+    print("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#")
+    print("-#-#-#-#-#-RUNNING DNS SPOOFER-#-#-#-#-#-")
+    print("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#")
+    print("Interface:\t\t\t%s" % iface)
+    print("Resolving to IP:\t\t%s" % local_ip)
+    print("Spoof domains:\t\t%s" % ', '.join(spoof_domains))
+    print("BPF sniff filter:\t\t%s" % sniff_filter)
+    print("")
+    print("Waiting for DNS requests...")
+    print("(Make sure the device you are targeting is set to use"\
+            "your local IP (%s) as its DNS server)" % local_ip)
+
+    scapy.sniff(iface=iface,
+                filter=sniff_filter,
+                prn=handle_packet_fn(iface, local_ip, spoof_domains)) 
+开发者ID:robert，项目名称:how-to-build-a-tcp-proxy，代码行数:18，代码来源:fake_dns_server.py
+
+
+示例12: parsepacket
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def parsepacket(p):
+    if DHCP6_Solicit in p:
+        target = get_target(p)
+        if should_spoof_dhcpv6(target.host):
+            send_dhcp_advertise(p[DHCP6_Solicit], p, target)
+    if DHCP6_Request in p:
+        target = get_target(p)
+        if p[DHCP6OptServerId].duid == config.selfduid and should_spoof_dhcpv6(target.host):
+            send_dhcp_reply(p[DHCP6_Request], p)
+            print('IPv6 address %s is now assigned to %s' % (p[DHCP6OptIA_NA].ianaopts[0].addr, pcdict[p.src]))
+    if DHCP6_Renew in p:
+        target = get_target(p)
+        if p[DHCP6OptServerId].duid == config.selfduid and should_spoof_dhcpv6(target.host):
+            send_dhcp_reply(p[DHCP6_Renew],p)
+            print('Renew reply sent to %s' % p[DHCP6OptIA_NA].ianaopts[0].addr)
+    if ARP in p:
+        arpp = p[ARP]
+        if arpp.op is 2:
+            #Arp is-at package, update internal arp table
+            arptable[arpp.hwsrc] = arpp.psrc
+    if DNS in p:
+        if p.dst == config.selfmac:
+            send_dns_reply(p) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:25，代码来源:mitm6.py
+
+
+示例13: get_kube_dns_ip_mac
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def get_kube_dns_ip_mac(self):
+        config = get_config()
+        kubedns_svc_ip = self.extract_nameserver_ip()
+
+        # getting actual pod ip of kube-dns service, by comparing the src mac of a dns response and arp scanning.
+        dns_info_res = srp1(
+            Ether() / IP(dst=kubedns_svc_ip) / UDP(dport=53) / DNS(rd=1, qd=DNSQR()),
+            verbose=0,
+            timeout=config.network_timeout,
+        )
+        kubedns_pod_mac = dns_info_res.src
+        self_ip = dns_info_res[IP].dst
+
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+        for _, response in arp_responses:
+            if response[Ether].src == kubedns_pod_mac:
+                return response[ARP].psrc, response.src 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:21，代码来源:dns.py
+
+
+示例14: dnshandle
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def dnshandle(pkt):
+    if dns_sniff_gource:
+        sys.stdout = open(random_filename+'parsed_nmap', 'a')
+        FQDN = pkt.getlayer(scapy.DNS).qd.qname
+        domain = FQDN.split('.')
+        print str(time.time())[:-3] + "|" + target + "|A|" + str(domain[1]) + '/' + str(FQDN)
+    else:
+        if pkt.haslayer(scapy.DNS):
+            print(bcolours.OKBLUE + pkt.getlayer(scapy.IP).src + '\t' + pkt.getlayer(scapy.IP).dst + '\t' + bcolours.WARNING + pkt.getlayer(scapy.DNS).qd.qname + bcolours.ENDC) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:11，代码来源:arpy.py
+
+
+示例15: main
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def main():
+    try:
+        if user.CURRENT_USER_ID <> 0:
+            unprivileged_user_print(user.CURRENT_USER_NAME)
+
+        if dns_sniff_gource:
+            print(bcolours.OKBLUE + '[INFO] For a live gource feed run this command in parallel with this one:' + bcolours.WARNING + '\n\ntail -f ' + random_filename + 'parsed_nmap | tee /dev/stderr | gource -log-format custom -a 1 --file-idle-time 0 -\n\n' + bcolours.ENDC)
+
+        #This check is to see if anything but gource parser is set
+        if (not dns_sniff_gource) or (dns_sniff or sniff_pkts):
+            print banner()
+            #check if we actually have some info
+            if target == None or gateway == None and interface == None:
+                options.print_help()
+                return
+
+            if dns_sniff:
+                print(bcolours.OKBLUE + '\n  [Info] Starting DNS Sniffer...\n' + bcolours.ENDC)
+
+            elif sniff_pkts:
+                print(bcolours.OKBLUE + '\n  [Info] Starting Sniffer...\n' + bcolours.ENDC)
+
+        if dns_sniff_gource or dns_sniff or sniff_pkts:
+            setup_ipv_forwarding()
+            print (bcolours.OKBLUE + '[Info] Filter: ' + filter_parser() + bcolours.ENDC)
+            print ("Target\tDNS\tFQDN")
+            while True:
+                start_poisen(target, interface, filter_parser())
+        else:
+            options.print_help()
+
+    except KeyboardInterrupt:
+        print(bcolours.WARNING + '  [Warning] Stopping...' + bcolours.ENDC)
+        sys.exit(3) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:36，代码来源:arpy.py
+
+
+示例16: _sniff_start
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _sniff_start(self,
+                     destination_mac_address: str,
+                     destination_ipv4_address: str,
+                     destination_ipv6_address: str,
+                     source_port: int = 53) -> None:
+        """
+        Sniff DNS answers
+        :param destination_mac_address: Destination MAC address in DNS answer (most likely this is MAC address on your network interface)
+        :param destination_ipv4_address: Destination IPv4 address in DNS answer (most likely this is IPv4 address on your network interface)
+        :param destination_ipv6_address: Destination IPv6 address in DNS answer (most likely this is IPv6 address on your network interface)
+        :param source_port: Source UDP port in DNS answer (default: 53 - default port for DNS servers)
+        :return: None
+        """
+        while self.base.get_process_pid('tshark') != -1:
+            kill(self.base.get_process_pid('tshark'), SIGINT)
+            sleep(1)
+        try:
+            remove(RawDnsResolver.tshark_pcap_filename)
+        except FileNotFoundError:
+            pass
+        tshark_command: str = 'tshark -i ' + self.network_interface + \
+                              ' -f "ether dst ' + destination_mac_address + \
+                              ' and ip dst ' + destination_ipv4_address + \
+                              ' and udp src port ' + str(source_port) + \
+                              '" -B 65535 -w ' + RawDnsResolver.tshark_pcap_filename + \
+                              ' 1>/dev/null 2>&1'
+        self.tshark_process = Popen(tshark_command, shell=True)
+        sleep(0.5)
+        while self.base.get_process_pid('tshark') == -1:
+            input(self.base.c_warning + 'Start tshark: ' + self.base.info_text(tshark_command) +
+                  ' and press Enter to continue ...')
+            sleep(1)
+    # endregion
+
+    # region Check tshark 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:37，代码来源:dns_resolver.py
+
+
+示例17: _sniff_stop
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _sniff_stop(self):
+        while self.base.get_process_pid('tshark') != -1:
+            kill(self.base.get_process_pid('tshark'), SIGTERM)
+            sleep(1)
+        try:
+            packets = rdpcap(RawDnsResolver.tshark_pcap_filename)
+            for packet in packets:
+                self._parse_packet(packet)
+        except ValueError:
+            pass
+    # endregion
+
+    # region Send DNS queries to IPv4 NS server 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:15，代码来源:dns_resolver.py
+
+
+示例18: scapy_send_dhcp_discover_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def scapy_send_dhcp_discover_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dhcp_discover_request = Ether(src=ethernet_src, dst='ff:ff:ff:ff:ff:ff') /\
+                                IP(src='0.0.0.0', dst='255.255.255.255') /\
+                                UDP(dport=67, sport=68) /\
+                                BOOTP(chaddr=ethernet_src, xid=randint(1, 4294967295)) /\
+                                DHCP(options=[('message-type', 'discover'), 'end'])
+        sendp(dhcp_discover_request, verbose=False)
+# endregion
+
+
+# region Send DNS Request packets in raw-packet 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:14，代码来源:time_test.py
+
+
+示例19: raw_packet_send_dns_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def raw_packet_send_dns_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dns_request = dns.make_a_query(src_mac=ethernet_src, dst_mac=ethernet_dst,
+                                       src_ip=ip_src, dst_ip=ip_dst,
+                                       src_port=randint(1024, 65535), dst_port=53,
+                                       tid=randint(1, 1000), names=['www.' + str(randint(1, 1000)) + '.com'])
+        global_socket.send(dns_request)
+# endregion
+
+
+# region Send DNS Request packets in scapy 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:13，代码来源:time_test.py
+
+
+示例20: scapy_send_dns_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def scapy_send_dns_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dns_request = Ether(src=ethernet_src, dst=ethernet_dst) /\
+                      IP(src=ip_src, dst=ip_dst) /\
+                      UDP(dport=53, sport=randint(1024, 65535)) /\
+                      DNS(id=randint(1, 1000), rd=1, qd=DNSQR(qname="www." + str(randint(1, 1000)) + ".com"))
+        sendp(dns_request, verbose=False)
+# endregion
+
+
+# region Main function 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:13，代码来源:time_test.py
+
+
+示例21: test_from_datasources
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def test_from_datasources():
+    packets_1 = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    packets_2 = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    nx = NetworkX.from_datasources(
+        [packets_to_datasource_events(packets) for packets in [packets_1, packets_2]]
+    )
+
+    # Make the graph
+    nx.graph()
+
+    assert not nx.is_empty() 
+开发者ID:yampelo，项目名称:beagle，代码行数:37，代码来源:test_networkx.py
+
+
+示例22: convert_dns_ans
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def convert_dns_ans(dns_ans, ancount):
+    """Convert list of DNS answers to list of rrnames."""
+    ans_tab = [dns_ans[index].rrname.strip(".") for index in range(ancount)]
+    return ans_tab 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:6，代码来源:mdns_utils.py
+
+
+示例23: protocol_full_name
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def protocol_full_name():
+        """Provide full (not abbreviated) name of protocol."""
+        return "Multicast DNS" 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:5，代码来源:mdns_utils.py
+
+
+示例24: __init__
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def __init__(self, kubedns_pod_ip):
+        Vulnerability.__init__(
+            self, KubernetesCluster, "Possible DNS Spoof", category=IdentityTheft, vid="KHV030",
+        )
+        self.kubedns_pod_ip = kubedns_pod_ip
+        self.evidence = "kube-dns at: {}".format(self.kubedns_pod_ip)
+
+
+# Only triggered with RunningAsPod base event 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:11，代码来源:dns.py
+
+
+示例25: main
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def main():
+    """
+    Main Loop
+    """
+    global DEBUG
+    global PLUG
+    options = parsingopt()
+
+    if options.verbose:
+        DEBUG = True
+        print('Listening.....')
+
+    # Plugin Thread
+    if options.pluginfd:
+        valplugin(options.pluginfd)
+        if flogin():
+            if DEBUG:
+                print('INFO: Login to Faraday OK')
+            PLUG = True
+        else:
+            print('ERROR: Faraday Login incorrect, skip plugin')
+
+    # PING Thread
+    pingdh = PINGHandler(options.nic, options.fd)
+    pingdh.daemon = True
+    pingdh.start()
+
+    # Traceroute Thread
+    tracedh = TraceHandler(options.nic, options.fd)
+    tracedh.daemon = True
+    tracedh.start()
+
+    # DNS Thread
+    dnsdh = DNSHandler(options.nic, options.fd, CCNAME)
+    dnsdh.daemon = True
+    dnsdh.start()
+
+    # HTTP Thread (direct or via proxy)
+    httpdh = HTTPHandler(options.nic, options.fd)
+    httpdh.daemon = True
+    httpdh.start()
+
+    # HTTPS Thread
+    httpsdh = HTTPSHandler(options.nic, options.fd)
+    httpsdh.daemon = True
+    httpsdh.start()
+
+    # NTP Thread
+    ntpdh = NTPHandler(options.nic, options.fd)
+    ntpdh.daemon = True
+    ntpdh.start()
+
+    # Running loop
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        sys.exit(0)
+
+# Call main 
+开发者ID:ekiojp，项目名称:circo，代码行数:62，代码来源:carpa.py
+
+
+示例26: _parse_packet
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _parse_packet(self, packet) -> None:
+        """
+        Parse DNS answers
+        :param packet: DNS packet
+        :return: None
+        """
+        try:
+            assert packet.haslayer(IP), 'Is not IPv4 packet!'
+            assert packet.haslayer(UDP), 'Is not UDP packet!'
+            assert packet.haslayer(DNS), 'Is not DNS packet!'
+            assert packet[IP].dst == self.your_ipv4_address, 'Not your destination IPv4 address!'
+            assert packet[UDP].sport == 53, 'UDP source port != 53'
+            assert packet[DNS].ancount != 0, 'DNS answer is empty!'
+            for answer_index in range(packet[DNS].ancount):
+                dns_answer = packet[DNS].an[answer_index]
+                name: bytes = dns_answer.rrname
+                name: str = name.decode('utf-8')[:-1]
+                assert self.domain in name, 'Not found target domain in DNS answer!'
+                address: str = ''
+                if isinstance(dns_answer.rdata, bytes):
+                    address: bytes = dns_answer.rdata
+                    address: str = address.decode('utf-8')
+                if isinstance(dns_answer.rdata, str):
+                    address: str = dns_answer.rdata
+                match_host = next((host for host in self.uniq_hosts if host['name'] == name
+                                   and host['address'] == address), None)
+                if match_host is None:
+                    self.uniq_hosts.append({'name': name, 'address': address})
+
+                    if dns_answer.type == 2:
+                        self._save_result({'Domain': name,
+                                           'NS': address})
+                    if dns_answer.type == 1:
+                        self._save_result({'Domain': name,
+                                           'IPv4 address': address,
+                                           'IPv6 address': '-'})
+                    if dns_answer.type == 28:
+                        self._save_result({'Domain': name,
+                                           'IPv4 address': '-',
+                                           'IPv6 address': address})
+
+        except AssertionError:
+            pass
+
+        except UnicodeDecodeError:
+            pass
+    # endregion
+
+    # region Start tshark 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:51，代码来源:dns_resolver.py
+
+
+示例27: _send_ipv6_queries
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _send_ipv6_queries(self,
+                           source_mac_address: str,
+                           source_ipv6_address: str,
+                           ns_server_mac_address: str,
+                           ns_server_ipv6_address: str,
+                           ns_server_port: int,
+                           queries: List[Dict[str, Union[int, str]]],
+                           send_socket: socket) -> None:
+        """
+        Send DNS queries to IPv6 DNS servers
+        :param source_mac_address: Source MAC address for DNS query (most likely this is MAC address on your network interface)
+        :param source_ipv6_address: Source IPv6 address for DNS query (most likely this is IPv6 address on your network interface)
+        :param ns_server_mac_address: DNS server MAC address for DNS query
+        :param ns_server_ipv6_address: DNS server IPv6 address for DNS query
+        :param ns_server_port: DNS server destination UDP port for DNS query (default: 53)
+        :param queries: List of DNS queries for sending (example: [{'type': 1, 'class': 1, 'name': 'www.test.com'}])
+        :param send_socket: Raw socket for sending DNS queries
+        :return: None
+        """
+
+        for query in queries:
+
+            # Set source UDP port and DNS transaction ID for sending DNS query
+            udp_source_port: int = randint(2049, 65535)
+            dns_transaction_id: int = randint(1, 65535)
+
+            send_socket.send(self.dns.make_ipv6_request_packet(ethernet_src_mac=source_mac_address,
+                                                               ethernet_dst_mac=ns_server_mac_address,
+                                                               ip_src=source_ipv6_address,
+                                                               ip_dst=ns_server_ipv6_address,
+                                                               udp_src_port=udp_source_port,
+                                                               udp_dst_port=ns_server_port,
+                                                               transaction_id=dns_transaction_id,
+                                                               queries=[query]))
+            # self.index_of_dns_query += 1
+            # current_percent_of_complete = int((self.index_of_dns_query / self.number_of_dns_queries) * 100)
+            # if current_percent_of_complete > self.percent_of_complete:
+            #     self.percent_of_complete = current_percent_of_complete
+            #     stdout.write('\r')
+            #     stdout.write(self.base.c_info + 'DNS resolve percentage: ' +
+            #                  self.base.info_text(str(self.percent_of_complete) + '%') +
+            #                  ' length of results: ' + self.base.info_text(str(len(self.results))))
+            #     stdout.flush()
+            #     sleep(0.01)
+    # endregion
+
+    # region Send DNS queries function 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:49，代码来源:dns_resolver.py
+
+
+示例28: _process_packet_helper
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _process_packet_helper(self, pkt):
+
+        if sc.ARP in pkt:
+            return self._process_arp(pkt)
+
+        if sc.DHCP in pkt:
+            return self._process_dhcp(pkt)
+
+        # SYN-ACK response to SYN scans
+        if sc.TCP in pkt and pkt[sc.TCP].flags == 'SA' and sc.IP in pkt:
+            tcp_layer = pkt[sc.TCP]
+            if tcp_layer.dport == SYN_SCAN_SOURCE_PORT and tcp_layer.ack == SYN_SCAN_SEQ_NUM + 1:
+                return self._process_syn_scan(pkt)
+
+        # Must have Ether frame and IP frame.
+        if not (sc.Ether in pkt and sc.IP in pkt):
+            return
+
+        src_mac = pkt[sc.Ether].src
+        dst_mac = pkt[sc.Ether].dst
+
+        src_oui = utils.get_oui(src_mac)
+        dst_oui = utils.get_oui(dst_mac)
+
+        # Include only devices for internal testing (if set)
+        if utils.TEST_OUI_LIST:
+            if not (src_oui in utils.TEST_OUI_LIST or
+                    dst_oui in utils.TEST_OUI_LIST):
+                return
+
+        # Ignore traffic to and from this host's IP
+        if self._host_state.host_ip in (pkt[sc.IP].src, pkt[sc.IP].dst):
+            return
+
+        # DNS
+        if sc.DNS in pkt:
+            self._process_dns(pkt)
+
+        # Commented out the following. We want to see traffic between device and gateway.
+        # # Ignore traffic to and from the gateway's IP
+        # if self._host_state.gateway_ip in (pkt[sc.IP].src, pkt[sc.IP].dst):
+        #    return
+
+        # TCP/UDP
+        if sc.TCP in pkt:
+            protocol = 'tcp'
+        elif sc.UDP in pkt:
+            protocol = 'udp'
+        else:
+            return
+
+        return self._process_tcp_udp_flow(pkt, protocol) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:54，代码来源:packet_processor.py
+
+
+示例29: _process_dns
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def _process_dns(self, pkt):
+
+        src_mac = pkt[sc.Ether].src
+        dst_mac = pkt[sc.Ether].dst
+
+        src_ip = pkt[sc.IP].src
+        dst_ip = pkt[sc.IP].dst
+
+        # Find device ID
+        if pkt[sc.DNS].qr == 0:
+            # DNS request
+            if dst_mac == self._host_state.host_mac:
+                device_mac = src_mac
+                resolver_ip = dst_ip
+            else:
+                return
+        else:
+            # DNS response
+            if src_mac == self._host_state.host_mac:
+                device_mac = dst_mac
+                resolver_ip = src_ip
+            else:
+                return
+
+        device_id = utils.get_device_id(device_mac, self._host_state)
+
+        # Parse domain
+        try:
+            domain = pkt[sc.DNSQR].qname.decode('utf-8').lower()
+        except Exception:
+            return
+
+        # Remove trailing dot from domain
+        if domain[-1] == '.':
+            domain = domain[0:-1]
+
+        # Parse DNS response
+        ip_set = set()
+        if sc.DNSRR in pkt and pkt[sc.DNS].an:
+            for ix in range(pkt[sc.DNS].ancount):
+                # Extracts A-records
+                if pkt[sc.DNSRR][ix].type == 1:
+                    # Extracts IPv4 addr in A-record
+                    ip = pkt[sc.DNSRR][ix].rdata
+                    if utils.is_ipv4_addr(ip):
+                        ip_set.add(ip)
+
+        with self._host_state.lock:
+            dns_key = (device_id, domain, resolver_ip, 0)
+            current_ip_set = self._host_state \
+                .pending_dns_dict.setdefault(dns_key, set())
+            ip_set = ip_set | current_ip_set
+            self._host_state.pending_dns_dict[dns_key] = ip_set 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:55，代码来源:packet_processor.py
+
+
+示例30: filter_action
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DNS [as 别名]
+def filter_action(self, packet):
+        """Count size of sniffed packet."""
+        if UDP in packet:
+            try:
+                print ("[-] Received UDP packet")
+                packet.show()
+                # show_verbose(self.test_params, packet[IP])
+                dns_resp_rrname = ""
+                if DNS in packet:
+                    dns_response = packet[DNS]
+                    print ("[-] DNS packet parsed by scapy")
+                    print (
+                        "dns_response[DNS].ancount = {}".format(
+                            dns_response[DNS].ancount
+                        )
+                    )
+                    if dns_response[DNS].ancount > 0:
+                        print ("dns_response[DNS].an = {}".format(dns_response[DNS].an))
+                        print (
+                            "dns_response[DNS].an[0].rrname = {}".format(
+                                dns_response[DNS].an[0].rrname
+                            )
+                        )
+                        dns_resp_rrname = convert_dns_ans(
+                            dns_response[DNS].an, dns_response[DNS].ancount
+                        )
+                        print (dns_resp_rrname)
+                if Raw in packet:
+                    dns_response = DNSRecord.parse(packet[Raw].load)
+                    print ("[-] DNS Packet parsed by dnslib")
+                    if self.test_params.verbose:
+                        print ("Received DNS message: {}".format(dns_response))
+                        print (
+                            "DNS message contains answer: {}".format(
+                                dns_response.get_a()
+                            )
+                        )
+                        dns_resp_rrname = str(dns_response.get_a())
+                        self.server_response = dns_response.rr
+                if self.query in dns_resp_rrname or self.query == dns_resp_rrname:
+                    self.server_alive = True
+                    self.test_params.report_received_packet(self.start_time)
+                    # answers = dns_response.header.a
+                    # print("Answers = {}".format(answers))
+            except AttributeError as exc:
+                print_verbose(self.test_params, str(exc)) 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:48，代码来源:mdns_utils.py

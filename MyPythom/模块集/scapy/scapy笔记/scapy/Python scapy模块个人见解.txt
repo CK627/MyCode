@@ -1,0 +1,96 @@
+Python scapy模块个人见解
+
+
+scapy模块
+
+from scapy.all import *    //来自scapy.all文件，导入所有函数
+
+python交互模式中：ls（*）*=Ether、IP、ICMP、TCP、UDP、ARP    等等,查看可以配置的参数
+
+
+
+1.构建包：不同层之间用/分隔（常用）
+
+Ether = Ether(src="源mac"，dst="目的mac")    //以太网层 =  二层
+
+IP   = IP(src="源ip"，dst="目的ip或者URL")   //IP层   =  三层
+
+XY   = ICMP()、TCP()、UDP() [都可以用dport=目的端口，sport=源端口]//协议封装在IP层  
+
+ARP  = ARP(hwsrc='二层源mac',psrc='三层源IP',hwdst='二层目的mac',pdst='三层目的IP')     SJ    = padding(load='x'*8)           //数据位，填充 x乘8个    
+
+
+
+RandMAC()  任意MAC地址               
+
+RandIP()   任意IP地址
+
+
+
+构建二层包：(以Ether层开头)
+
+ 如：pkt=Ether/IP/ARP
+
+构建三层包：(以IP层开头)
+
+ 如：pkt=IP/XY/SJ
+
+
+
+2.只发送
+
+ 二层：sendp()  //给定网卡接口
+
+ 三层：send()   //自动根据路由表进行路由发送
+
+
+
+ 如发二层包：
+
+     sendp（pkt,iface="eth0",loop=1,inter=1 ）  
+
+ 参数：
+
+pkt          构建包的变量
+
+iface="eth0" 选择网卡为eth0
+
+loop=1       循环发送
+
+inter=1      每隔1秒发送 
+
+timeout=1    超时1秒就丢弃，实际时间看程序处理能力而定 
+
+
+
+3.发送并返回
+
+ 二层：
+
+     srp()   //发送包， 返回答复和没有答复的包的数量
+
+     srp1() //发送包， 返回只答复或者发送的包的详细信息| .参数，显示这个参数的返回数据
+
+ 三层：
+
+     sr(  )  //发送包， 返回答复和没有答复的包的数量
+
+     sr1( ) //发送包， 返回只答复或者发送的包的详细信息|.参数，显示这个参数的返回数据
+
+
+
+ 如二层发收包：
+
+     srp1（pkt,timeout=1,verbose=0 ）
+
+ 参数：
+
+        pkt       构建包的变量
+
+        timeout=1 超时1秒就丢弃，实际时间看程序处理能力而定
+
+        verbose=0 不显示详细信息
+
+
+
+以上是我个人学习积累到的知识，如有需要更正或者增加的地方，欢迎来与我交流学习一番，共同进步，谢谢观看。

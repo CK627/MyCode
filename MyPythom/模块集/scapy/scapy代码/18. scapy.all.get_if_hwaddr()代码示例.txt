@@ -1,0 +1,92 @@
+示例1: get_my_mac_set
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import get_if_hwaddr [as 别名]
+def get_my_mac_set(iface_filter=None):
+    """Returns a set of MAC addresses of the current host."""
+
+    out_set = set()
+    if sys.platform.startswith("win"):
+        from scapy.arch.windows import NetworkInterface
+        if type(iface_filter) == NetworkInterface:
+            out_set.add(iface_filter.mac)
+
+    for iface in sc.get_if_list():
+        if iface_filter is not None and iface != iface_filter:
+            continue
+        try:
+            mac = sc.get_if_hwaddr(iface)
+        except Exception as e:
+            continue
+        else:
+            out_set.add(mac)
+
+    return out_set 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:22，代码来源:utils.py
+
+
+
+ 
+示例2: main
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import get_if_hwaddr [as 别名]
+def main():
+
+    if len(sys.argv)<3:
+        print 'pass 2 arguments: <destination> "<message>"'
+        exit(1)
+
+    addr = socket.gethostbyname(sys.argv[1])
+    iface = get_if()
+
+    print "sending on interface %s to %s" % (iface, str(addr))
+    pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
+    pkt = pkt /IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / sys.argv[2]
+    pkt.show2()
+    sendp(pkt, iface=iface, verbose=False) 
+开发者ID:nsg-ethz，项目名称:p4-utils，代码行数:16，代码来源:send.py
+
+
+示例3: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import get_if_hwaddr [as 别名]
+def get_mac(interface):
+    try:
+        mac_address = get_if_hwaddr(interface)
+        return mac_address
+    except Exception as e:
+        shutdown("Error retrieving MAC address from {}: {}".format(interface, e)) 
+开发者ID:paranoidninja，项目名称:piSociEty，代码行数:8，代码来源:utils.py
+
+
+
+ 
+示例4: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import get_if_hwaddr [as 别名]
+def get_mac(self):
+        try:
+            mac_address = get_if_hwaddr(self._iface)
+            return mac_address
+        except Exception as e:
+            print("Error retrieving MAC address from {}: {}".format(self._iface, e)) 
+开发者ID:shramos，项目名称:polymorph，代码行数:8，代码来源:poison.py
+
+
+示例5: get_default_gateway_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import get_if_hwaddr [as 别名]
+def get_default_gateway_mac(self, interface):
+        try:
+            return get_if_hwaddr(interface)
+        except OSError as e:
+            _LOGGER.error(
+                "Error when trying to get MAC of router on interface '%s': %s",
+                e.args[1])
+
+        return None 
+开发者ID:pilotak，项目名称:HomeAssistant-CustomComponents，代码行数:11，代码来源:arpspoof.py

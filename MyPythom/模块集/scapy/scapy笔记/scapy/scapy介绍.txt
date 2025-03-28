@@ -1,0 +1,181 @@
+scapy介绍：
+
+在python中可以通过scapy这个库轻松实现构造数据包、发送数据包、分析数据包，为网络编程之利器！
+
+scapy安装:
+pip install scapy   ======> scapy不是内置模块，故需要额外安装
+
+导入scapy方式：
+from scapy.all import *
+
+构造包：
+
+a = Ether()/IP(dst='114.114.114.114')/TCP(dport=80)
+#应用层数据
+
+print(a.show())
+#可以先通过a.show()函数查看数据包的构成部分，然后在构造包时就知道有哪些参数可以填了
+
+发送包：
+
+sr(IP(dst='192.168.1.0/24')/TCP(dport=(1,65535)), timeout=2)
+#发送三层数据包，等待接收一个或多个数据包的响应(注意：当依次向每个IP的65535个端口发送完才算执行完这个函数，而不是调用一次只发一个包，以下所有发包方式都与之一样)
+
+sr1()
+#发送三层数据包，并仅仅只等待接收一个数据包的响应
+
+srp(Ether(dst='11:11:11:11:11:11')/IP(dst='1.1.1.1')/ICMP())
+#发送二层数据包，并且等待回应(这个函数可以编辑二层头部，sr()不能编辑二层头部)
+
+send()
+#仅仅发送三层数据包，不等待回包（发完就拉倒了）
+
+sendp()
+#仅仅发送二层数据包，不等待回包
+
+
+解析回包：
+
+1、sr
+
+reply_packet = sr(IP(dst='114.114.114.114')/ICMP(), timeout=2)
+
+print(reply_packet)
+
+(<Results: TCP:0 UDP:0 ICMP:1 Other:0>, <Unanswered: TCP:0 UDP:0 ICMP:0 Other:0>)       ====>第一个元素为接收到的包,第二个元素为没有收到的包
+
+print(reply_packet[0].res)
+
+[(<IP  frag=0 proto=icmp dst=114.114.114.114 |<ICMP  |>>, <IP  version=4 ihl=5 tos=0x0 len=28 id=32921 flags= frag=0 ttl=75 proto=icmp chksum=0xbb37 src=114.114.114.114 dst=172.20.163.23options=[] |<ICMP type=echo-reply code=0 chksum=0xffff id=0x0 seq=0x0 |<Padding  load='\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' |>>>)]     ====>列表里面为所有回包情况,一个元素(元组)为一个回包. 其元组中第一个元素为发送的包,第二个元素为返回的包
+
+
+查看回包各项属性：
+
+print(reply_packet[0].res[0][1].fields)
+
+{'version': 4, 'ihl': 5, 'tos': 0, 'len': 28, 'id': 56445, 'flags': <Flag 0 ()>, 'frag': 0, 'ttl': 75, 'proto': 1, 'chksum': 24403, 'src': '114.114.114.114', 'dst': '172.20.163.23','options': []}
+
+注意:这里默认只给出了三层头部,其实'reply_packet[0].res[0][1].fields' == 'reply_packet[0].res[0][1][0].fields',res的第三位[0]表示精确到第几层,这里[0]代表IP层,[1]进一层到传输层,[2]进一步到应用层。例：
+
+print(reply_packet[0].res[0][1][1].fields)
+
+{'type': 0, 'code': 0, 'chksum': 65535, 'id': 0, 'seq': 0}
+
+
+print(reply_packet[0].res[0][1][2].fields)
+
+{'load': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'}
+
+
+同时也可以直接用show方法查看包体内容，例：
+
+print(reply_packet[0].res[0][1].show())
+
+###[ IP ]###
+
+  version   = 4
+
+  ihl       = 5
+
+  tos       = 0x0
+
+  len       = 28
+
+  id        = 34404
+
+  flags     =
+
+  frag      = 0
+
+  ttl       = 79
+
+  proto     = icmp
+
+  chksum    = 0xb16c
+
+  src       = 114.114.114.114
+
+  dst       = 172.20.163.23
+
+  \options   \
+
+###[ ICMP ]###
+
+     type      = echo-reply
+
+     code      = 0
+
+     chksum    = 0xffff
+
+     id        = 0x0
+
+     seq       = 0x0
+
+###[ Padding ]###
+
+        load      = '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+ 
+总结: 到reply_packet[0].res[0][1]这一层就相当于是真正的回包包体了,包体可以用fields属性(返回字典)和show方法(返回字符串)来查看其内容. 而前面几层都是对数据包的一些统计描述.
+
+
+2、sr1
+
+reply_packet = sr1(IP(dst='114.114.114.114')/ICMP(), timeout=2)
+
+print(reply_packet)   =====>    b'E\x00\x00\x1c\xe0\xd8\x00\x00H\x01]\xf8rrrr\xac\x14\xa3\x17\x00\x00\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+sr1返回的对象没有太多复杂东西,直接相当于sr返回对象的reply_packet[0].res[0][1],可以理解为sr1返回的对象是sr返回对象的一个子集.
+
+print(reply_packet.fields)   ====>    {'version': 4, 'ihl': 5, 'tos': 0, 'len': 28, 'id': 19164, 'flags': <Flag 0 ()>, 'frag': 0, 'ttl': 66, 'proto': 1, 'chksum': 63988, 'src': '114.114.114.114', 'dst': '172.20.163.23', 'options': []}
+
+sr1的reply_packet == sr的reply_packet[0].res[0][1], 所以可以和sr一样直接用fields来读取其内容.
+
+
+3、srp
+
+reply_packet = srp(Ether(dst='00:23:89:bb:c7:85')/IP(dst='114.114.114.114')/ICMP())
+
+print(reply_packet[0].res[0][1].fields)    =====>   {'dst': '00:0c:29:d9:3f:63', 'src': '00:23:89:bb:c7:85', 'type': 2048}
+
+注意:这里默认只给出了二层头部,可以通过调节res后第三位的值来选择性查看每层信息,res的第三位[0]表示精确到第几层,[0]代表二层,[1]进一层到IP层,[2]进一步到传输层,[3]进一步到应用层
+
+例：
+
+print(reply_packet[0].res[0][1][1].fields)   =====> {'version': 4, 'ihl': 5, 'tos': 0, 'len': 28, 'id': 62339, 'flags': <Flag 0 ()>, 'frag': 0, 'ttl': 67, 'proto': 1, 'chksum': 20557, 'src': '114.114.114.114', 'dst': '172.20.163.23', 'options': []}
+
+
+print(reply_packet[0].res[0][1][2].fields)       =====> {'type': 0, 'code': 0, 'chksum': 65535, 'id': 0, 'seq': 0}
+
+
+print(reply_packet[0].res[0][1][3].fields)        ======> {'load': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'}
+
+
+抓包、分析包：
+
+# prn指向一个回调函数，意为将收到的包丢给prn指向的函数处理（注意：回调的意义！每收到一个包就丢到回调函数里执行一下，执行完了才再跑回来继续抓包）
+
+# filter为包过滤规则（语法参照tcpdump过滤规则）
+
+# store为是否要存储抓到的包（注意，如果没有存储则不会将抓到的包赋值给a，因为没有存下就没有东西可以赋，此参数默认开启）
+
+# timeout为抓包时长，比如抓30秒就结束（注意：如果没有指定抓包时长则会一直抓下去，程序会一直卡在这里）
+
+# iface为指定抓包的网卡
+
+
+a = sniff(prn=abc, filter='tcp port 80 and ip 192.168.1.1', store=1, timeout=30, iface='eth0')   
+
+wrpcap('packet.cap', a)    ======> 此函数可以将抓到的包存到本地（注意：将包写入本地不能使用open（'packet.cap', 'r'）,因为open函数只能写入字符串）。
+
+bbb = rdpcap('/root/桌面/ftp_pcapng.cap')  =======> 此函数可以将本地存储的数据包读取出来
+
+for i in bbb: =======> 读取出来的对象是由N个数据包组成的可迭代对象，每次迭代一个包
+
+    try: ======> 有些包可能没有要提取的对象，当提取包里没有的属性时则会报错，所以捕获异常好让程序继续往下执行
+
+        print(i.getlayer('Raw').fields['load'].decode().strip())     ======> 输出数据包的应用层负载
+
+    except :
+
+        continue

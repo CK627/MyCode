@@ -1,0 +1,51 @@
+Python3 scapy sniff 监控网卡流量！还怕流量超标吗？
+
+使用 scapy 进行流量监控。
+
+依赖
+需要 Python3 环境并安装 scapy： python3 -m pip install scapy
+windows 环境需要安装 winpcap
+
+示例代码
+#!/usr/bin/env python
+# _*_ Coding: UTF-8 _*_
+from scapy.all import *
+
+
+def capture(x):
+    if b'HTTP/' in x.lastlayer().original and x.lastlayer().original[0:4] != b'HTTP':
+        print('dst ip:', x.payload.dst)
+        print('request body:', x.lastlayer().original)
+
+
+def main():
+    sniff(filter="tcp", prn=lambda x: capture(x))
+
+
+if __name__ == '__main__':
+    main()
+
+
+代码说明
+sniff(filter="tcp", prn=lambda x: capture(x))
+
+count 捕获数量, 设置为 0 时则持续捕获
+store 数据包处理： 1 保存, 0 丢弃
+offline 从 pcap 文件中读取数据包, 而不进行嗅探, 默认为 None
+prn 回调函数
+filter 过滤规则, 使用 winreshark 语法
+L2socket 使用给定的 L2socket
+timeout 在给定的事件后停止嗅探, 默认为 None
+opened_socket 对指定的对象使用 .recv 进行读取
+stop_filter 定义捕获到指定数据的停止函数
+iface 指定抓包的网卡, 默认代表所有网卡
+capture(x)
+
+x 对象是一个 scapy.layers.l2.Ether 的实例对象
+在 if 语句中使用了字符判断的释放过滤了 HTTP 的请求
+打印了目标地址和请求体
+
+输出内容
+dst ip: 192.168.1.1
+request body: b'GET / HTTP/1.1\r\nHost: 192.168.1.1\r\nConnection: keep-alive\r\nCache-Control: max-age=0\r\nUpgrade-Insecure-Requests: 1\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9\r\nAccept-Encoding: gzip, deflate\r\nAccept-Language: zh-CN,zh;q=0.9\r\nCookie: ysrc_token=a0acd4c5f569632400e36c677fc9b0f9; csrftoken=tfxBYYQZGqw7HockaN93cGEVtN9zoJlJq5nYemwSlBi2CJvpuZ7UAJ8c81Nm46CD; auth=Z3Vlc3Q6Z3Vlc3Q%3D; m=34e2:|c01:t\r\nIf-None-Match: "5ee84cf2-1fe"\r\nIf-Modified-Since: Tue, 16 Jun 2020 04:39:14 GMT\r\n\r\n'
+

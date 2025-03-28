@@ -1,0 +1,674 @@
+示例1: callback
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def callback(self, packet):
+        flags = packet.sprintf("%TCP.flags%")
+        proto = IP
+        if IPv6 in packet:
+            proto = IPv6
+        if flags == "A" and not self.ignore_packet(packet, proto):
+            src_mac = packet[Ether].src
+            dst_mac = packet[Ether].dst
+            src_ip = packet[proto].src
+            dst_ip = packet[proto].dst
+            src_port = packet[TCP].sport
+            dst_port = packet[TCP].dport
+            seq = packet[TCP].seq
+            ack = packet[TCP].ack
+            if self.verbose:
+                print("RST from %s:%s (%s) --> %s:%s (%s) w/ %s" % (src_ip, src_port, src_mac, dst_ip, dst_port, dst_mac, ack))
+            if self.noisy:
+                self.send(self.build_packet(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, seq, proto))
+            self.send(self.build_packet(dst_mac, src_mac, dst_ip, src_ip, dst_port, src_port, ack, proto)) 
+开发者ID:ecthros，项目名称:pina-colada，代码行数:21，代码来源:tcpkiller.py
+
+
+
+ 
+示例2: test_single_udp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_single_udp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=5355)
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 5355
+    assert events[0]["event_type"] == "UDP" 
+开发者ID:yampelo，项目名称:beagle，代码行数:20，代码来源:test_pcap.py
+
+
+示例3: test_single_tcp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_single_tcp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355)
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 5355
+    assert events[0]["event_type"] == "TCP" 
+开发者ID:yampelo，项目名称:beagle，代码行数:20，代码来源:test_pcap.py
+
+
+
+ 
+示例4: test_single_dns_resp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_single_dns_resp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1"))
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 53
+    assert events[0]["qname"] == "google.com."
+    assert events[0]["qanswer"] == "123.0.0.1"
+    assert events[0]["qtype"] == "A"
+    assert events[0]["event_type"] == "DNS" 
+开发者ID:yampelo，项目名称:beagle，代码行数:24，代码来源:test_pcap.py
+
+
+示例5: test_single_http_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_single_http_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 12345
+    assert events[0]["dport"] == 80
+    assert events[0]["http_method"] == "GET"
+    assert events[0]["uri"] == "/foo"
+    assert events[0]["http_dest"] == "https://google.com"
+
+    assert events[0]["event_type"] == "HTTPRequest" 
+开发者ID:yampelo，项目名称:beagle，代码行数:26，代码来源:test_pcap.py
+
+
+
+ 
+示例6: test_multiple_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_multiple_packets():
+    packets = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 3
+
+    assert [e["event_type"] for e in events] == ["HTTPRequest", "DNS", "TCP"] 
+开发者ID:yampelo，项目名称:beagle，代码行数:25，代码来源:test_pcap.py
+
+
+示例7: _process_syn_scan
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def _process_syn_scan(self, pkt):
+        """
+        Receives SYN scan response from devices.
+
+        """
+        src_mac = pkt[sc.Ether].src
+        device_id = utils.get_device_id(src_mac, self._host_state)
+        device_port = pkt[sc.TCP].sport
+
+        with self._host_state.lock:
+            port_list = self._host_state.pending_syn_scan_dict.setdefault(device_id, [])
+            if device_port not in port_list:
+                port_list.append(device_port)
+                utils.log('[SYN Scan Debug] Device {} ({}): Port {}'.format(
+                    pkt[sc.IP].src, device_id, device_port
+                )) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:18，代码来源:packet_processor.py
+
+
+示例8: build_dhcp
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def build_dhcp(pdiscover):
+    req_addr = None
+    server_id = None
+    vendor_class = None
+    try:
+        for m in pdiscover[DHCP].options:
+            n, v = m
+            if n == "requested_addr":
+                req_addr = v
+            elif n == "server_id":
+                server_id = v
+            elif n == "vendor_class_id":
+                vendor_class = v
+    except:
+        pass
+    print "[i] --> received vendor_class = %s" % vendor_class
+    e_dst = pdiscover[Ether].src
+
+    p = Ether(dst=e_dst) / IP(src=server_id, dst=req_addr or "0.0.0.0") / UDP(sport=67, dport=68, len=9000)
+    p[UDP].chksum = get_udp_checksum(p)
+    return p 
+开发者ID:tintinweb，项目名称:pub，代码行数:23，代码来源:poc.py
+
+
+示例9: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def run(self):
+        """Starts the thread, which is sniffing incoming ARP packets and sends out packets to spoof
+        all clients on the network and the gateway. This packets are sent every __SLEEP seconds.
+
+        Note:
+            First, a ARP request packet is generated for every possible client of the network.
+            This packets are directed at the gateway and update existing entries of the gateway's ARP table.
+            So the gateway is not flooded with entries for non-existing clients.
+
+            Second, a GARP broadcast request packet is generated to spoof every client on the network.
+        """
+        # start sniffing thread
+        self.sniffthread.start()
+
+        # generates a packet for each possible client of the network
+        # these packets update existing entries in the arp table of the gateway
+        # packets = [Ether(dst=self.gate_mac) / ARP(op=1, psrc=str(x), pdst=str(x)) for x in self.ip_range]
+
+        # gratuitous arp to clients
+        # updates the gateway entry of the clients arp table
+        packets = [Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.ipv4.gateway, pdst=self.ipv4.gateway, hwdst=ETHER_BROADCAST)]
+        while True:
+            sendp(packets)
+            time.sleep(self.__SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:26，代码来源:daemon_app.py
+
+
+示例10: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def run(self):
+        """Sends IGMP general query packets using the multicast address 224.0.0.1.
+        Received replies are processed by a SniffThread.
+        """
+
+        # create IGMP general query packet
+        ether_part = Ether(src=self.mac)
+        ip_part = IP(ttl=self._TTL, src=self.ip, dst=self._IGMP_MULTICAST)
+        igmp_part = IGMP(type=self._IGMP_GENERAL_QUERY)
+
+        # Called to explicitely fixup associated IP and Ethernet headers
+        igmp_part.igmpize(ether=ether_part, ip=ip_part)
+
+        while True:
+            sendp(ether_part / ip_part / igmp_part)
+            time.sleep(self._SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:18，代码来源:misc_thread.py
+
+
+示例11: scan_ips
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def scan_ips(interface='wlan0', ips='192.168.1.0/24'):
+    """a simple ARP scan with Scapy"""
+    try:
+        print('[*] Start to scan')
+        conf.verb = 0 # hide all verbose of scapy
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        arp = ARP(pdst = ips)
+        answer, unanswered = srp(ether/arp, timeout = 2, iface = interface, inter = 0.1)
+
+        for sent, received in answer:
+            print(received.summary())
+
+    except KeyboardInterrupt:
+        print('[*] User requested Shutdown')
+        print('[*] Quitting...')
+        sys.exit(1) 
+开发者ID:madeindjs，项目名称:Wifi_BruteForce，代码行数:18，代码来源:network_scanner.py
+
+
+示例12: send_dhcp_advertise
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def send_dhcp_advertise(p, basep, target):
+    global ipv6noaddrc
+    resp = Ether(dst=basep.src)/IPv6(src=config.selfaddr, dst=basep[IPv6].src)/UDP(sport=547, dport=546) #base packet
+    resp /= DHCP6_Advertise(trid=p.trid)
+    #resp /= DHCP6OptPref(prefval = 255)
+    resp /= DHCP6OptClientId(duid=p[DHCP6OptClientId].duid)
+    resp /= DHCP6OptServerId(duid=config.selfduid)
+    resp /= DHCP6OptDNSServers(dnsservers=[config.selfaddr])
+    if config.localdomain:
+        resp /= DHCP6OptDNSDomains(dnsdomains=[config.localdomain])
+    if target.ipv4 != '':
+        addr = config.ipv6prefix + target.ipv4.replace('.', ':')
+    else:
+        addr = config.ipv6prefix + '%d:%d' % (config.ipv6noaddr, config.ipv6noaddrc)
+        config.ipv6noaddrc += 1
+    opt = DHCP6OptIAAddress(preflft=300, validlft=300, addr=addr)
+    resp /= DHCP6OptIA_NA(ianaopts=[opt], T1=200, T2=250, iaid=p[DHCP6OptIA_NA].iaid)
+    sendp(resp, iface=config.default_if, verbose=False) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:20，代码来源:mitm6.py
+
+
+示例13: send_dhcp_reply
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def send_dhcp_reply(p, basep):
+    resp = Ether(dst=basep.src)/IPv6(src=config.selfaddr, dst=basep[IPv6].src)/UDP(sport=547, dport=546) #base packet
+    resp /= DHCP6_Reply(trid=p.trid)
+    #resp /= DHCP6OptPref(prefval = 255)
+    resp /= DHCP6OptClientId(duid=p[DHCP6OptClientId].duid)
+    resp /= DHCP6OptServerId(duid=config.selfduid)
+    resp /= DHCP6OptDNSServers(dnsservers=[config.selfaddr])
+    if config.localdomain:
+        resp /= DHCP6OptDNSDomains(dnsdomains=[config.localdomain])
+    try:
+        opt = p[DHCP6OptIAAddress]
+        resp /= DHCP6OptIA_NA(ianaopts=[opt], T1=200, T2=250, iaid=p[DHCP6OptIA_NA].iaid)
+        sendp(resp, iface=config.default_if, verbose=False)
+    except IndexError:
+        # Some hosts don't send back this layer for some reason, ignore those
+        if config.debug or config.verbose:
+            print('Ignoring DHCPv6 packet from %s: Missing DHCP6OptIAAddress layer' % basep.src) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:19，代码来源:mitm6.py
+
+
+示例14: get_kube_dns_ip_mac
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def get_kube_dns_ip_mac(self):
+        config = get_config()
+        kubedns_svc_ip = self.extract_nameserver_ip()
+
+        # getting actual pod ip of kube-dns service, by comparing the src mac of a dns response and arp scanning.
+        dns_info_res = srp1(
+            Ether() / IP(dst=kubedns_svc_ip) / UDP(dport=53) / DNS(rd=1, qd=DNSQR()),
+            verbose=0,
+            timeout=config.network_timeout,
+        )
+        kubedns_pod_mac = dns_info_res.src
+        self_ip = dns_info_res[IP].dst
+
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+        for _, response in arp_responses:
+            if response[Ether].src == kubedns_pod_mac:
+                return response[ARP].psrc, response.src 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:21，代码来源:dns.py
+
+
+示例15: build_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def build_packet(self, src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, seq, proto):
+        eth = Ether(src=src_mac, dst=dst_mac, type=0x800)
+        if proto == IP:
+            ip = IP(src=src_ip, dst=dst_ip)
+        elif proto == IPv6:
+            ip = IPv6(src=src_ip, dst=dst_ip)
+        else:
+            return str(eth) #if unknown L2 protocol, send back dud ether packet
+        tcp = TCP(sport=src_port, dport=dst_port, seq=seq, flags="R")
+        return str(eth/ip/tcp) 
+开发者ID:ecthros，项目名称:pina-colada，代码行数:12，代码来源:tcpkiller.py
+
+
+示例16: scapy_send_arp_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def scapy_send_arp_requests(number_of_packets):
+    arp_request = Ether(src=ethernet_src, dst='ff:ff:ff:ff:ff:ff') /\
+                  ARP(op=1, hwsrc=ethernet_src, hwdst='00:00:00:00:00:00', psrc=ip_src, pdst=ip_dst)
+    sendp(arp_request, count=number_of_packets, verbose=False)
+# endregion
+
+
+# region Send DHCP Discover packets in raw-packet 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:10，代码来源:time_test.py
+
+
+示例17: scapy_send_dhcp_discover_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def scapy_send_dhcp_discover_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dhcp_discover_request = Ether(src=ethernet_src, dst='ff:ff:ff:ff:ff:ff') /\
+                                IP(src='0.0.0.0', dst='255.255.255.255') /\
+                                UDP(dport=67, sport=68) /\
+                                BOOTP(chaddr=ethernet_src, xid=randint(1, 4294967295)) /\
+                                DHCP(options=[('message-type', 'discover'), 'end'])
+        sendp(dhcp_discover_request, verbose=False)
+# endregion
+
+
+# region Send DNS Request packets in raw-packet 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:14，代码来源:time_test.py
+
+
+示例18: scapy_send_dns_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def scapy_send_dns_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        dns_request = Ether(src=ethernet_src, dst=ethernet_dst) /\
+                      IP(src=ip_src, dst=ip_dst) /\
+                      UDP(dport=53, sport=randint(1024, 65535)) /\
+                      DNS(id=randint(1, 1000), rd=1, qd=DNSQR(qname="www." + str(randint(1, 1000)) + ".com"))
+        sendp(dns_request, verbose=False)
+# endregion
+
+
+# region Main function 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:13，代码来源:time_test.py
+
+
+示例19: dhcpv6_callback
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def dhcpv6_callback(pkt):
+    global dhcpv6_server_mac
+    global dhcpv6_server_ipv6_link
+    global dhcpv6_server_duid
+
+    if pkt.haslayer(DHCP6_Advertise) or pkt.haslayer(DHCP6_Reply):
+        if pkt[DHCP6OptServerId].duid is None:
+            return False
+        else:
+            dhcpv6_server_mac = pkt[Ether].src
+            dhcpv6_server_ipv6_link = pkt[IPv6].src
+            dhcpv6_server_duid = pkt[DHCP6OptServerId].duid
+            return True
+    else:
+        return False 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:17，代码来源:dnsmasploit.py
+
+
+示例20: test_single_ether_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_single_ether_packet():
+
+    packets = [Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["event_type"] == "Ether" 
+开发者ID:yampelo，项目名称:beagle，代码行数:12，代码来源:test_pcap.py
+
+
+示例21: test_single_ip_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_single_ip_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["event_type"] == "IP" 
+开发者ID:yampelo，项目名称:beagle，代码行数:17，代码来源:test_pcap.py
+
+
+示例22: main
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def main():
+
+    if len(sys.argv)<3:
+        print 'pass 2 arguments: <destination> "<message>"'
+        exit(1)
+
+    addr = socket.gethostbyname(sys.argv[1])
+    iface = get_if()
+
+    print "sending on interface %s to %s" % (iface, str(addr))
+    pkt =  Ether(src=get_if_hwaddr(iface), dst='ff:ff:ff:ff:ff:ff')
+    pkt = pkt /IP(dst=addr) / TCP(dport=1234, sport=random.randint(49152,65535)) / sys.argv[2]
+    pkt.show2()
+    sendp(pkt, iface=iface, verbose=False) 
+开发者ID:nsg-ethz，项目名称:p4-utils，代码行数:16，代码来源:send.py
+
+
+示例23: _get_source_from_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def _get_source_from_packet(self, packet):
+        try:
+            ethernet_header = packet["Ether"]
+            return ethernet_header.src
+        except:
+            dot11_header = packet["Dot11"]
+            return dot11_header.addr2 
+开发者ID:Esser420，项目名称:EvilTwinFramework，代码行数:9，代码来源:credentialsniffer.py
+
+
+示例24: _get_destination_from_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def _get_destination_from_packet(self, packet):
+        try:
+            ethernet_header = packet["Ether"]
+            return ethernet_header.dst
+        except:
+            dot11_header = packet["Dot11"]
+            return dot11_header.addr1 
+开发者ID:Esser420，项目名称:EvilTwinFramework，代码行数:9，代码来源:credentialsniffer.py
+
+
+示例25: _arp_scan_thread_helper
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def _arp_scan_thread_helper(self):
+
+        fast_scan_start_ts = None
+
+        while True:
+
+            if not self._host_state.is_inspecting():
+                time.sleep(1)
+                continue
+
+            for ip in utils.get_network_ip_range():
+
+                sleep_time = SLOW_SCAN_SLEEP_TIME
+
+                # Whether we should scan fast or slow
+                with self._host_state.lock:
+                    fast_arp_scan = self._host_state.fast_arp_scan
+
+                # If fast scan, we do it for at most 5 mins
+                if fast_arp_scan:
+                    sleep_time = FAST_SCAN_SLEEP_TIME
+                    if fast_scan_start_ts is None:
+                        fast_scan_start_ts = time.time()
+                    else:
+                        if time.time() - fast_scan_start_ts > 300:
+                            fast_scan_start_ts = None
+                            sleep_time = SLOW_SCAN_SLEEP_TIME
+                            with self._host_state.lock:
+                                self._host_state.fast_arp_scan = False
+
+                time.sleep(sleep_time)
+
+                arp_pkt = sc.Ether(dst="ff:ff:ff:ff:ff:ff") / \
+                    sc.ARP(pdst=ip, hwdst="ff:ff:ff:ff:ff:ff")
+                sc.sendp(arp_pkt, verbose=0)
+
+                with self._lock:
+                    if not self._active:
+                        return 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:41，代码来源:arp_scan.py
+
+
+示例26: scan
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def scan(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+
+    clients_list = []
+    for element in answered_list:
+        client_dict = {"ip": element[1].psrc, "mac": element[1].hwsrc}
+        clients_list.append(client_dict)
+    return clients_list 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:14，代码来源:network_scanner.py
+
+
+示例27: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def get_mac(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+    return answered_list[0][1].hwsrc
+
+
+# Change mac address in arp table 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:12，代码来源:arp_spoofing.py
+
+
+示例28: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def get_mac(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+    return answered_list[0][1].hwsrc 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:9，代码来源:arp_spoof_detector.py
+
+
+示例29: test_dissect_fields
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def test_dissect_fields(self):
+        scapy_pkt = Ether(bytearray.fromhex(pkt))
+        offset = len(scapy_pkt[Ether]) - len(scapy_pkt[IP])
+        diss_fields = self.tgen._dissect_fields(scapy_pkt[IP], offset)
+        length = eval(diss_fields['len'])
+        chksum = eval(diss_fields['chksum'])
+        dst = eval(diss_fields['dst'])
+        self.assertEqual(length, slice(16, 18))
+        self.assertEqual(chksum, slice(24, 26))
+        self.assertEqual(dst, slice(30, 34)) 
+开发者ID:shramos，项目名称:polymorph，代码行数:12，代码来源:tgenerator_test.py
+
+
+示例30: setUp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Ether [as 别名]
+def setUp(self):
+        self.template = pkt_to_template(Ether(bytearray.fromhex(pkt))) 
+开发者ID:shramos，项目名称:polymorph，代码行数:4，代码来源:template_test.py

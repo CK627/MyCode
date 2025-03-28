@@ -1,0 +1,27 @@
+optparse模块主要用来为脚本传递命令参数，采用预先定义好的选项来解析命令行参数。
+
+dest：用于保存输入的临时变量，其值通过options的属性进行访问，存储的内容是dest之前输入的参数，多个参数用逗号分隔
+type: 用于检查命令行参数传入的参数的数据类型是否符合要求，有 string，int，float 等类型
+help：用于生成帮助信息
+default: 给dest的默认值，如果用户没有在命令行参数给dest分配值，则使用默认值
+dest：用于保存输入的临时变量，其值通过options的属性进行访问，存储的内容是-f或 --file之后输入的参数
+help：用于生成帮助信息
+default: 给dest的默认值，如果用户没有在命令行参数给dest分配值，则使用默认值
+type: 用于检查命令行参数传入的参数的数据类型是否符合要求，有string，int，float等类型
+action: 用于指导程序在遇到命令行参数时候该如何处理，有三种值可选： store,store_false和store_true,默认值是store
+  store：读取参数，如果参数类型符合type的要求，则将参数值传递给dest变量，作为options的一个属性供使用。
+  store_true/store_false: 一般作为一个标记使用，分别设置dest变量的值为True和False
+metavar: 占位字符串，用于在输出帮助信息时，代替当前命令选项的附加参数的值进行输出，只在帮助信息里有用，注意其和default的区别
+verbose：日志显示
+verbose = 0 为不在标准输出流输出日志信息
+verbose = 1 为输出进度条记录
+verbose = 2 为每个epoch输出一行记录
+注意： 默认为 1
+timeout = 1超时时间1秒
+iface 指定网卡
+
+
+verbose = 0 在标准输出中将不会看到任何现
+
+原文链接：https://blog.csdn.net/qq_36119192/article/details/83661848
+https://blog.csdn.net/dcrmg/article/details/78045570

@@ -1,0 +1,46 @@
+<t-user-center-card
+  userInfo="{{userInfo}}"
+  isPhoneHide="{{true}}"
+  name-class="custom-name-class"
+  phone-class="custom-phone-class"
+  avatar-class="customer-avatar-class"
+  currAuthStep="{{currAuthStep}}"
+  bind:gotoUserEditPage="gotoUserEditPage"
+/>
+<view class="content-wrapper">
+  <view class="order-group-wrapper">
+    <t-order-group orderTagInfos="{{orderTagInfos}}" bind:onClickTop="jumpAllOrder" bind:onClickItem="jumpNav" />
+  </view>
+  <view class="cell-box">
+    <t-cell-group>
+      <t-cell
+        title="收货地址"
+        arrow
+        t-class="t-cell-class"
+        t-class-left="order-group__left"
+        data-type="address"
+        bind:click="onClickCell"
+      />
+      <t-cell
+        title="联系客服"
+        arrow
+        t-class="t-cell-class"
+        t-class-left="order-group__left"
+        data-type="service"
+        bind:click="onClickCell"
+        bordered="{{false}}"
+      />
+    </t-cell-group>
+  </view>
+</view>
+<t-popup visible="{{showMakePhone}}" placement="bottom" bind:visible-change="closeMakePhone" data-index="2">
+  <view class="popup-content">
+    <view class="popup-title border-bottom-1px" wx:if="{{customerServiceInfo.serviceTimeDuration}}">
+      服务时间: {{customerServiceInfo.serviceTimeDuration}}
+    </view>
+    <view class="popup-phone {{showKefu ? 'border-bottom-1px' : ''}}" bind:tap="call">电话客服</view>
+    <button class="popup-phone border-bottom-1px online" open-type="contact" wx:if="{{showKefu}}">在线客服</button>
+    <view class="popup-close" bind:tap="closeMakePhone">取消</view>
+  </view>
+</t-popup>
+<t-toast id="t-toast" />

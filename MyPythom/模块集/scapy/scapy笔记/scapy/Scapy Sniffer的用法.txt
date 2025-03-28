@@ -1,0 +1,134 @@
+Scapy Sniffer的用法
+
+﻿﻿
+Sniff方法定义：
+
+sniff(filter="",iface="any", prn=function, count=N)
+
+filter的规则使用 Berkeley Packet Filter (BPF)语法，具体参考http://blog.csdn.net/qwertyupoiuytr/article/details/54670477
+
+iface用来指定要在哪个网络接口上进行抓包（通常不指定即所有网络接口）
+
+prn指定回调函数，每当一个符合filter的报文被探测到时，就会执行回调函数，通常使用lambda表达式来写回调函数
+
+count指定最多嗅探多少个报文（是指符合filter条件的报文，而非所有报文）
+
+ 
+
+filter写法举例：
+
+抓取源地址为172.31.100.222的端口为80的tcp报文：
+
+>>> sniff(filter="ip src 172.31.100.222 and tcp and tcp port 80", prn=lambda x:x.summary())
+
+Ether / IP / TCP 172.31.100.222:ssh > 172.31.100.149:57386 PA / Raw
+
+Ether / IP / TCP 172.31.100.222:http > 172.31.100.149:59163 RA
+
+Ether / IP / TCP 172.31.100.222:http > 172.31.100.149:59163 RA
+
+Ether / IP / TCP 172.31.100.222:http > 172.31.100.149:59163 RA
+
+Ether / IP / TCP 172.31.100.222:http > 172.31.100.149:59164 RA
+
+Ether / IP / TCP 172.31.100.222:http > 172.31.100.149:59164 RA
+
+抓取目的地址网段为139.219.0.0/24的报文：
+
+>>> sniff(filter="dst net 139.219", prn=lambda x:x.summary())
+
+Ether / IP / TCP 172.31.100.222:ssh > 172.31.100.149:57386 PA / Raw
+
+Ether / IP / TCP 172.31.100.149:58879 > 139.219.224.155:https PA / Raw
+
+Ether / IP / TCP 172.31.100.149:58879 > 139.219.224.155:https PA / Raw
+
+Ether / IP / TCP 172.31.100.149:58879 > 139.219.224.155:https PA / Raw
+
+Ether / IP / TCP 172.31.100.149:58879 > 139.219.224.155:https A / Padding
+
+Ether / IP / TCP 172.31.100.149:58879 > 139.219.224.155:https PA / Raw
+
+Ether / IP / TCP 172.31.100.149:58879 > 139.219.224.155:https PA / Raw
+
+抓取非ICMP的报文：
+
+>>> sniff(filter="not icmp", prn=lambda x:x.summary())
+
+Ether / IP / TCP 172.31.100.222:ssh > 172.31.100.149:57386 PA / Raw
+
+Ether / IP / TCP 172.31.100.222:ssh > 172.31.100.149:57386 PA / Raw
+
+Ether / IP / TCP 172.31.100.149:57386 > 172.31.100.222:ssh A / Padding
+
+Ether / IP / TCP 172.31.100.222:ssh > 172.31.100.149:57386 PA / Raw
+
+ 
+
+prn函数举例：
+
+将抓取到的报文的summary打印出来：
+
+>>> sniff(filter="icmp", prn=lambda x:x.summary(), count=10)
+
+Ether / IP / TCP 172.31.100.222:ssh > 172.31.100.149:57212 PA / Raw
+
+Ether / IP / ICMP 172.31.100.149 > 172.31.100.222 echo-request 0 / Raw
+
+Ether / IP / ICMP 172.31.100.222 > 172.31.100.149 echo-reply 0 / Raw
+
+Ether / IP / ICMP 172.31.100.149 > 172.31.100.222 echo-request 0 / Raw
+
+Ether / IP / ICMP 172.31.100.222 > 172.31.100.149 echo-reply 0 / Raw
+
+Ether / IP / ICMP 172.31.100.149 > 172.31.100.222 echo-request 0 / Raw
+
+Ether / IP / ICMP 172.31.100.222 > 172.31.100.149 echo-reply 0 / Raw
+
+Ether / IP / ICMP 172.31.100.149 > 172.31.100.222 echo-request 0 / Raw
+
+Ether / IP / ICMP 172.31.100.222 > 172.31.100.149 echo-reply 0 / Raw
+
+Ether / IP / ICMP 172.31.100.149 > 172.31.100.222 echo-request 0 / Raw
+
+<Sniffed: TCP:1 UDP:0 ICMP:9 Other:0>
+
+ 
+
+将所有IP报文的源地址打印出来：
+
+>>> sniff(filter="icmp", prn=lambda x:x[IP].src, count=10)
+
+172.31.100.222
+
+172.31.100.149
+
+172.31.100.222
+
+172.31.100.149
+
+172.31.100.222
+
+172.31.100.149
+
+172.31.100.222
+
+172.31.100.149
+
+172.31.100.222
+
+172.31.100.149
+
+<Sniffed: TCP:1 UDP:0 ICMP:9 Other:0>
+
+ 
+
+或者定义一个回调函数：
+
+def packet_callback(packet):
+
+    print packet.show()
+
+ 
+
+sniff(prn=packet_callback, count=10)

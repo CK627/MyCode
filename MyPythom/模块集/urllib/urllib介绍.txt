@@ -1,0 +1,46 @@
+urllib是python中自带的一个基于爬虫的模块，
+
+作用：urllib 模块是一个高级的 web 交流库，其核心功能就是模仿web浏览器等客户端，去请求相应的资源，并返回一个类文件对象。
+可以使用代码模拟浏览器发起请求。
+1.基本方法
+url: 需要打开的网址
+data：Post提交的数据
+timeout：设置网站的访问超时时间
+直接用urllib.request模块的urlopen（）获取页面，page的数据格式为bytes类型，需要decode（）解码，转换成str类型
+
+urlopen返回对象提供方法：
+- read() , readline() ,readlines() , fileno() , close() ：对HTTPResponse类型数据进行操作
+- info()：返回HTTPMessage对象，表示远程服务器返回的头信息
+- getcode()：返回Http状态码。如果是http请求，200请求成功完成;404网址未找到
+- geturl()：返回请求的url
+
+2.使用Request
+urlib.request.Request(url,data=None,headers={},method=None)
+
+使用request()来包装请求，再通过urlopen()获取页面。
+脚本为urllib2.py
+
+用来包装头部的数据：
+- User-Agent ：这个头部可以携带如下几条信息：浏览器名和版本号、操作系统名和版本号、默认语言
+- Referer：可以用来防止盗链，有一些网站图片显示来源http://*.com，就是检查Referer来鉴定的
+- Connection：表示连接状态，记录Session的状态。
+
+3.Post数据
+urllib.parse.urlencode(query,doseq=False,safe=",encoding=None,errors=None)
+
+urlencode () 主要作用就是将url附上要提交的数据
+脚本为urllib3.py
+经过urlencode（）转换后的data数据为?first=true?pn=1?kd=Python，最后提交的url为
+https://www.lagou.com/jobs/positionAjax.json?first=true?pn=1?kd=Python
+Post的数据必须是bytes或者iterable of bytes，不能是str，因此需要进行encode（）编码
+page = request.urlopen(req,data=data).read()
+当然，也可以把data的数据封装在urlopen（）参数中
+
+
+4.异常处理
+脚本为python4
+
+5.使用代理
+脚本为python5
+
+原文链接：https://blog.csdn.net/qq_38165374/article/details/74315838

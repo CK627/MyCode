@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>乐游网会员信息反馈表</title>
+    <style>
+        body {
+            background-color: #FFFFE0;
+            padding: 20px 20px 0;
+        }
+        table td:first-child {
+            text-align: left;
+            padding-right: 10px;
+        }
+        table td:last-child {
+            text-align: left; 
+        }
+        input[type="submit"], input[type="reset"] {
+            margin: 0 3px;
+        }
+        .required-star {
+            color: red;
+            margin-left: 3px;
+        }
+    </style>
+</head>
+<body>
+<h1>
+    <span style="color: orange;">乐游网</span>会员信息反馈表
+</h1>
+<form>
+    <table>
+        <tr>
+            <td><label for="memberName">会员名</label></td>
+            <td><input type="text" id="memberName" name="memberName" 
+                   pattern="[A-Za-z][A-Za-z0-9]{0,7}" 
+                   required autofocus autocomplete="off" 
+                   placeholder="以字母开头，最长8位" oninput="toggleStar(this)"><span class="required-star">*</span></td>
+        </tr>
+        <tr>
+            <td><label for="name">姓&nbsp;&nbsp;&nbsp;名</label></td>
+            <td><input type="text" id="name" name="name" required placeholder="请输入真实姓名" oninput="toggleStar(this)"><span class="required-star">*</span></td>
+        </tr>
+        <tr>
+            <td><label for="gender">性&nbsp;&nbsp;&nbsp;别</label></td>
+            <td>
+                <input type="radio" id="male" name="gender" value="男" checked onchange="toggleStar(this)">
+                <label for="male">男</label>
+                <input type="radio" id="female" name="gender" value="女" onchange="toggleStar(this)">
+                <label for="female">女</label>
+            </td>
+        </tr>
+        <tr>
+            <td><label for="idCard">身份证号</label></td>
+            <td><input type="text" id="idCard" name="idCard" required 
+                   pattern="(^[1-9]\d{5}(18|19|([23]\d))\d{2}(0[1-9]|10|11|12)(0[1-9]|[12]\d|30|31)\d{3}[0-9Xx]$)|(^[1-9]\d{5}\d{2}(0[1-9]|10|11|12)(0[1-9]|[12]\d|30|31)\d{3}$)" 
+                   placeholder="请输入有效身份证号" oninput="toggleStar(this)"><span class="required-star">*</span></td>
+        </tr>
+        <tr>
+            <td><label for="phone">联系电话</label></td>
+            <td><input type="text" id="phone" name="phone" required pattern="^1[3-9]\d{9}$" placeholder="填写常用手机" oninput="toggleStar(this)"><span class="required-star">*</span></td>
+        </tr>
+        <tr>
+            <td><label for="email">Email</label></td>
+            <td><input type="text" id="email" name="email" 
+                   pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$" 
+                   oninput="toggleStar(this)"></td>
+        </tr>
+        <tr>
+            <td><label for="age">年&nbsp;&nbsp;&nbsp;龄</label></td>
+            <td><input type="number" id="age" name="age" min="18" placeholder="会员必须满18周岁" oninput="toggleStar(this)"></td>
+        </tr>
+        <tr>
+            <td><label for="englishLevel">英语等级:</label></td>
+            <td>
+                <input type="range" id="englishLevel" name="englishLevel" min="4" max="10" value="4" oninput="toggleStar(this); updateEnglishLevelValue()">
+                <span id="englishLevelValue">4</span>
+                <script>
+                    const englishLevelInput = document.getElementById('englishLevel');
+                    const englishLevelValue = document.getElementById('englishLevelValue');
+                    function updateEnglishLevelValue() {
+                        englishLevelValue.textContent = englishLevelInput.value;
+                    }
+                    function toggleStar(input) {
+                        const parent = input.parentNode;
+                        const star = parent.querySelector('.required-star');
+                        if (input.type === 'radio') {
+                            const radios = document.querySelectorAll(`input[name="${input.name}"]`);
+                            for (let radio of radios) {
+                                if (radio.checked) {
+                                    if (star) star.style.display = 'none';
+                                    return;
+                                }
+                            }
+                            if (star) star.style.display = 'inline';
+                        } else {
+                            if (star) star.style.display = input.value ? 'none' : 'inline';
+                        }
+                    }
+                </script>
+            </td>
+        </tr>
+        <tr>
+            <td><label for="hobbies">爱&nbsp;&nbsp;&nbsp;好</label></td>
+            <td>
+                <input type="text" id="hobbies" name="hobbies" list="hobbyList" placeholder="请选择爱好" oninput="toggleStar(this)">
+                <datalist id="hobbyList">
+                    <option value="户外">
+                    <option value="购物">
+                    <option value="音乐">
+                    <option value="探险">
+                </datalist>
+            </td>
+        </tr>
+        <tr>
+            <td>备&nbsp;&nbsp;&nbsp;注</td>
+            <td>
+                <textarea rows="3" placeholder="" autocomplete="off"></textarea>
+            </td>
+        </tr>
+        <tr>
+            <td><label for="files">简&nbsp;&nbsp;&nbsp;介</label></td>
+            <td>
+                <input type="file" id="files" name="files" multiple onchange="toggleStar(this)">
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" style="text-align: left; padding-left: 20px;"> <!-- 通过padding-left和text-align实现左移 -->
+                <input type="submit" value="提交" style="background-color: orange; padding: 8px 35px; font-size: 14px; border-radius: 15px;">
+                <input type="reset" value="清空" style="background-color: orange; padding: 8px 35px; font-size: 14px; border-radius: 15px;">
+            </td>
+        </tr>
+    </table>
+</form>
+<div style="color: purple; padding-left: 30px;">
+    <p>注意：*号内容为必填选项</p>
+</div>
+
+</body>
+</html>

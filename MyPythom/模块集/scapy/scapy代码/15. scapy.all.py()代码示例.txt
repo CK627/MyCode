@@ -1,0 +1,83 @@
+示例1: import_module
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import py [as 别名]
+def import_module(name):
+    name = os.path.realpath(name)
+    thepath = os.path.dirname(name)
+    name = os.path.basename(name)
+    if name.endswith(".py"):
+        name = name[:-3]
+    f,path,desc = imp.find_module(name,[thepath])
+    
+    try:
+        return imp.load_module(name, f, path, desc)
+    finally:
+        if f:
+            f.close()
+
+
+#### INTERNAL/EXTERNAL FILE EMBEDDING #### 
+开发者ID:medbenali，项目名称:CyberScan，代码行数:18，代码来源:UTscapy.py
+
+
+
+ 
+示例2: usage
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import py [as 别名]
+def usage():
+    print >>sys.stderr,"""Usage: UTscapy [-m module] [-f {text|ansi|HTML|LaTeX}] [-o output_file] 
+               [-t testfile] [-k keywords [-k ...]] [-K keywords [-K ...]]
+               [-l] [-d|-D] [-F] [-q[q]] [-P preexecute_python_code]
+               [-s /path/to/scpay]
+-l\t\t: generate local files
+-F\t\t: expand only failed tests
+-d\t\t: dump campaign
+-D\t\t: dump campaign and stop
+-C\t\t: don't calculate CRC and SHA
+-s\t\t: path to scapy.py
+-q\t\t: quiet mode
+-qq\t\t: [silent mode]
+-n <testnum>\t: only tests whose numbers are given (eg. 1,3-7,12)
+-m <module>\t: additional module to put in the namespace
+-k <kw1>,<kw2>,...\t: include only tests with one of those keywords (can be used many times)
+-K <kw1>,<kw2>,...\t: remove tests with one of those keywords (can be used many times)
+-P <preexecute_python_code>
+"""
+    raise SystemExit
+
+
+#### MAIN #### 
+开发者ID:medbenali，项目名称:CyberScan，代码行数:25，代码来源:UTscapy.py
+
+
+示例3: usage
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import py [as 别名]
+def usage():
+    print("""Usage: UTscapy [-m module] [-f {text|ansi|HTML|LaTeX}] [-o output_file] 
+               [-t testfile] [-k keywords [-k ...]] [-K keywords [-K ...]]
+               [-l] [-d|-D] [-F] [-q[q]] [-P preexecute_python_code]
+               [-s /path/to/scpay]
+-l\t\t: generate local files
+-F\t\t: expand only failed tests
+-d\t\t: dump campaign
+-D\t\t: dump campaign and stop
+-C\t\t: don't calculate CRC and SHA
+-s\t\t: path to scapy.py
+-q\t\t: quiet mode
+-qq\t\t: [silent mode]
+-n <testnum>\t: only tests whose numbers are given (eg. 1,3-7,12)
+-m <module>\t: additional module to put in the namespace
+-k <kw1>,<kw2>,...\t: include only tests with one of those keywords (can be used many times)
+-K <kw1>,<kw2>,...\t: remove tests with one of those keywords (can be used many times)
+-P <preexecute_python_code>
+""", file = sys.stderr)
+    raise SystemExit
+
+
+#### MAIN #### 
+开发者ID:phaethon，项目名称:kamene，代码行数:25，代码来源:UTkamene.py

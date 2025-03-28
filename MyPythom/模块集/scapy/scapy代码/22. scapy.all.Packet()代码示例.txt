@@ -1,0 +1,128 @@
+示例1: test_multiple_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Packet [as 别名]
+def test_multiple_packets():
+    packets = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    events = list(packets_to_datasource_events(packets).events())
+    assert len(events) == 3
+
+    assert [e["event_type"] for e in events] == ["HTTPRequest", "DNS", "TCP"] 
+开发者ID:yampelo，项目名称:beagle，代码行数:25，代码来源:test_pcap.py
+
+
+
+ 
+示例2: __repr__
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Packet [as 别名]
+def __repr__(self):
+        if self.reserved != 0:
+            return scapy_all.Packet.__repr__(self)
+
+        # Known status
+        if self.status in self.ERROR_CODES and self.additional_size == 0:
+            return "<CIP_ResponseStatus  status={}>".format(self.ERROR_CODES[self.status])
+
+        # Simple status
+        if self.additional_size == 0:
+            return "<CIP_ResponseStatus  status=%#x>" % self.status
+
+        # Forward Open failure
+        if self.status == 1 and self.additional == b"\x00\x01":
+            return "<CIP_ResponseStatus  status=Connection failure>"
+        return scapy_all.Packet.__repr__(self) 
+开发者ID:scy-phy，项目名称:scapy-cip-enip，代码行数:18，代码来源:cip.py
+
+
+示例3: packets_to_datasource_events
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Packet [as 别名]
+def packets_to_datasource_events(packets: List[Packet]) -> PCAP:
+    f = BytesIO()
+    PcapWriter(f).write(packets)
+    f.seek(0)
+    return PCAP(f)  # type: ignore 
+开发者ID:yampelo，项目名称:beagle，代码行数:7，代码来源:test_pcap.py
+
+
+
+ 
+示例4: test_from_datasources
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Packet [as 别名]
+def test_from_datasources():
+    packets_1 = [
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com")
+    ]
+
+    packets_2 = [
+        # HTTP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=12345, dport=80)
+        / HTTP()
+        / HTTPRequest(Method="GET", Path="/foo", Host="https://google.com"),
+        # DNS Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / UDP(sport=80, dport=53)
+        / DNS(rd=1, qd=DNSQR(qtype="A", qname="google.com"), an=DNSRR(rdata="123.0.0.1")),
+        # TCP Packet
+        Ether(src="ab:ab:ab:ab:ab:ab", dst="12:12:12:12:12:12")
+        / IP(src="127.0.0.1", dst="192.168.1.1")
+        / TCP(sport=80, dport=5355),
+    ]
+
+    nx = NetworkX.from_datasources(
+        [packets_to_datasource_events(packets) for packets in [packets_1, packets_2]]
+    )
+
+    # Make the graph
+    nx.graph()
+
+    assert not nx.is_empty() 
+开发者ID:yampelo，项目名称:beagle，代码行数:37，代码来源:test_networkx.py
+
+
+示例5: verify
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import Packet [as 别名]
+def verify(self, test_params):
+        """Verify whether remote host is vulnerable to this vulnerability."""
+        test_result = sr1_file(test_params, VULN_DB_PATH + self.payload_file)
+        print ("[*] Payload for {} sent".format(self.name))
+        if test_result is not None:
+            if test_result is Packet:
+                show_verbose(test_params, test_result)
+        print (
+            "[+] Vulnerability {} is memory leak - verify manually result of "
+            "this test.".format(self.name)
+        )
+        self.report_potential_result(test_params) 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:14，代码来源:vulnerability_tester.py

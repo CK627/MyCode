@@ -1,0 +1,27 @@
+1.D
+2.A
+3.D
+4.B
+5.C
+6.D
+7.B
+8.C
+9.B
+10.C
+整数类型
+浮点数类型
+TRUE FALSE
+输出
+type()
+None
+有序
+break
+elif
+continue
+False
+pass
+不会
+break
+continue
+0,1,2
+对象

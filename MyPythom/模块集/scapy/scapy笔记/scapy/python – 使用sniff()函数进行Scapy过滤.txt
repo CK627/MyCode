@@ -1,0 +1,41 @@
+python – 使用sniff()函数进行Scapy过滤
+
+我正在使用scapy函数sniff()进行数据包捕获.我想只捕获EAP数据包.我可以使用tcpdump使用以下过滤器过滤EAP数据包：
+# tcpdump -i mon0 -p ether proto 0x888e
+tcpdump: WARNING: mon0: no IPv4 address assigned
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on mon0, link-type IEEE802_11_RADIO (802.11 plus radiotap header), capture size 65535 bytes
+13:04:41.949446 80847234901us tsft 48.0 Mb/s 2437 MHz 11g -16dB signal antenna 1 [bit 14] EAP packet (0) v1, len 5
+13:04:46.545776 80851831746us tsft 54.0 Mb/s 2437 MHz 11g -13dB signal antenna 1 [bit 14] EAP packet (0) v1, len 5
+同时我使用相同的过滤器运行sniff()函数,但函数不捕获任何EAP数据包：
+
+sniff(filter="ether proto 0x888e",iface="mon0", count = 1)
+
+为什么sniff()函数不捕获任何EAP数据包？
+
+编辑：
+
+对不起我后来的反应,我尝试了你的建议：
+
+> conf.iface = 'mon0'
+> pkts = sniff(filter="wlan proto 0x888e", count = 1)
+tcpdump: WARNING: mon0: no IPv4 address assigned
+> pkts
+Sniffed: TCP:0 UDP:0 ICMP:0 Other:1
+> EAP in pkts[0]
+False
+但这仍然没有捕获EAP数据包:(
+
+我知道这是一年之后,但为了其他任何人看到这个问题,答案是他捕获了EAPOL数据包,而不是EAP数据包.通过使用该命令
+sniff(filter="ether proto 0x888e", count=4)
+0x888e指的是以太网协议中的EAPOL,它需要使用ether proto,而不是wlan proto.我不确定0888e是否可以被引用到wlan proto中的任何东西,但是在做了几乎与op相同的事情之后(除了用’ether’替换’wlan’)我得到了
+
+>>> EAP in b[0]
+False
+但是当我进入
+
+>>> EAPOL in b[0]
+True
+我相信OP捕获了他的代码正在寻找的东西(2个EAPOL数据包),但他没有捕获他认为他正在寻找的东西 – 2个EAP数据包.
+
+编辑 – 即使我用wlan替换以太,我仍然将EAP视为false,将EAPOL视为true.

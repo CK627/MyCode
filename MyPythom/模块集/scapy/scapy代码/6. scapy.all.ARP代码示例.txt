@@ -1,0 +1,649 @@
+示例1: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def run(self):
+        """Starts the thread, which is sniffing incoming ARP packets and sends out packets to spoof
+        all clients on the network and the gateway. This packets are sent every __SLEEP seconds.
+
+        Note:
+            First, a ARP request packet is generated for every possible client of the network.
+            This packets are directed at the gateway and update existing entries of the gateway's ARP table.
+            So the gateway is not flooded with entries for non-existing clients.
+
+            Second, a GARP broadcast request packet is generated to spoof every client on the network.
+        """
+        # start sniffing thread
+        self.sniffthread.start()
+
+        # generates a packet for each possible client of the network
+        # these packets update existing entries in the arp table of the gateway
+        # packets = [Ether(dst=self.gate_mac) / ARP(op=1, psrc=str(x), pdst=str(x)) for x in self.ip_range]
+
+        # gratuitous arp to clients
+        # updates the gateway entry of the clients arp table
+        packets = [Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.ipv4.gateway, pdst=self.ipv4.gateway, hwdst=ETHER_BROADCAST)]
+        while True:
+            sendp(packets)
+            time.sleep(self.__SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:26，代码来源:daemon_app.py
+
+
+
+ 
+示例2: scan_ips
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def scan_ips(interface='wlan0', ips='192.168.1.0/24'):
+    """a simple ARP scan with Scapy"""
+    try:
+        print('[*] Start to scan')
+        conf.verb = 0 # hide all verbose of scapy
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        arp = ARP(pdst = ips)
+        answer, unanswered = srp(ether/arp, timeout = 2, iface = interface, inter = 0.1)
+
+        for sent, received in answer:
+            print(received.summary())
+
+    except KeyboardInterrupt:
+        print('[*] User requested Shutdown')
+        print('[*] Quitting...')
+        sys.exit(1) 
+开发者ID:madeindjs，项目名称:Wifi_BruteForce，代码行数:18，代码来源:network_scanner.py
+
+
+示例3: restore
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def restore(self, index):
+        try:
+            victimIP = self._devices[index][0]
+            victimMAC = self._devices[index][1]
+
+            _LOGGER.info("Enabling internet for device IP: %s MAC: %s",
+                         victimIP, victimMAC)
+
+            del self._devices[index]
+
+            send(ARP(op=2, pdst=victimIP, hwdst=victimMAC, psrc=self._router_ip,
+                     hwsrc=self._router_mac), count=4, iface=self._interface, verbose=False)
+            send(ARP(op=2, pdst=self._router_ip, hwdst=self._router_mac, psrc=victimIP,
+                     hwsrc=victimMAC), count=4, iface=self._interface, verbose=False)
+
+        except:
+            _LOGGER.error("Error when restoring device index: %s", index) 
+开发者ID:pilotak，项目名称:HomeAssistant-CustomComponents，代码行数:19，代码来源:arpspoof.py
+
+
+
+ 
+示例4: parsepacket
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def parsepacket(p):
+    if DHCP6_Solicit in p:
+        target = get_target(p)
+        if should_spoof_dhcpv6(target.host):
+            send_dhcp_advertise(p[DHCP6_Solicit], p, target)
+    if DHCP6_Request in p:
+        target = get_target(p)
+        if p[DHCP6OptServerId].duid == config.selfduid and should_spoof_dhcpv6(target.host):
+            send_dhcp_reply(p[DHCP6_Request], p)
+            print('IPv6 address %s is now assigned to %s' % (p[DHCP6OptIA_NA].ianaopts[0].addr, pcdict[p.src]))
+    if DHCP6_Renew in p:
+        target = get_target(p)
+        if p[DHCP6OptServerId].duid == config.selfduid and should_spoof_dhcpv6(target.host):
+            send_dhcp_reply(p[DHCP6_Renew],p)
+            print('Renew reply sent to %s' % p[DHCP6OptIA_NA].ianaopts[0].addr)
+    if ARP in p:
+        arpp = p[ARP]
+        if arpp.op is 2:
+            #Arp is-at package, update internal arp table
+            arptable[arpp.hwsrc] = arpp.psrc
+    if DNS in p:
+        if p.dst == config.selfmac:
+            send_dns_reply(p) 
+开发者ID:fox-it，项目名称:mitm6，代码行数:25，代码来源:mitm6.py
+
+
+示例5: build_arp_packet
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def build_arp_packet(source_mac, src=None, dst=None):
+    """ forge arp packets used to poison and reset target connection """
+    arp = dpkt.arp.ARP()
+    packet = dpkt.ethernet.Ethernet()
+    if not src or not dst:
+        return False
+    arp.sha = string_to_binary(source_mac)
+    arp.spa = inet_aton(dst)
+    arp.tha = '\x00' * 6
+    arp.tpa = inet_aton(src)
+    arp.op = dpkt.arp.ARP_OP_REPLY
+    packet.src = string_to_binary(source_mac)
+    packet.dst = '\xff' * 6 # broadcast address
+    packet.data = arp
+    packet.type = dpkt.ethernet.ETH_TYPE_ARP
+    return packet 
+开发者ID:codepr，项目名称:creak，代码行数:18，代码来源:utils.py
+
+
+
+ 
+示例6: restore
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def restore(self, delay, target_b=None):
+        if not target_b:
+            target_b = self.gateway
+        src_mac = ':'.join(a+b for a, b in zip(self.src_mac[::2], self.src_mac[1::2]))
+        if not isinstance(self.target, list):
+            dst_mac = utils.get_mac_by_ip(self.target)
+            send(ARP(op=2, pdst=target_b, psrc=self.target,
+                     hwdst="ff:" * 5 + "ff", hwsrc=dst_mac), count=3, verbose=False)
+            send(ARP(op=2, pdst=self.target, psrc=target_b,
+                     hwdst="ff:" * 5 + "ff", hwsrc=src_mac), count=3, verbose=False)
+        else:
+            for addr in self.target:
+                dst_mac = utils.get_mac_by_ip(addr)
+                send(ARP(op=2, pdst=target_b, psrc=addr,
+                         hwdst="ff:" * 5 + "ff", hwsrc=dst_mac), count=3, verbose=False)
+                send(ARP(op=2, pdst=addr, psrc=target_b,
+                         hwdst="ff:" * 5 + "ff", hwsrc=src_mac), count=3, verbose=False) 
+开发者ID:codepr，项目名称:creak，代码行数:19，代码来源:mitm.py
+
+
+示例7: get_kube_dns_ip_mac
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def get_kube_dns_ip_mac(self):
+        config = get_config()
+        kubedns_svc_ip = self.extract_nameserver_ip()
+
+        # getting actual pod ip of kube-dns service, by comparing the src mac of a dns response and arp scanning.
+        dns_info_res = srp1(
+            Ether() / IP(dst=kubedns_svc_ip) / UDP(dport=53) / DNS(rd=1, qd=DNSQR()),
+            verbose=0,
+            timeout=config.network_timeout,
+        )
+        kubedns_pod_mac = dns_info_res.src
+        self_ip = dns_info_res[IP].dst
+
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+        for _, response in arp_responses:
+            if response[Ether].src == kubedns_pod_mac:
+                return response[ARP].psrc, response.src 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:21，代码来源:dns.py
+
+
+示例8: poison
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def poison():
+    v = scapy.ARP(pdst=target, psrc=gateway)
+    while True:
+        try:
+            scapy.send(v,verbose=0,inter=1,loop=1)
+        except KeyboardInterupt:
+            print(bcolours.OKBLUE + '  [Warning] Stopping...' + bcolours.ENDC)
+            sys.exit(3) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:10，代码来源:arpy.py
+
+
+示例9: gw_poison
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def gw_poison():
+    gw = scapy.ARP(pdst=gateway, psrc=target)
+    while True:
+        try:
+            scapy.send(gw,verbose=0,inter=1,loop=1)
+        except KeyboardInterrupt:
+            print(bcolours.OKBLUE + '  [Warning] Stopping...' + bcolours.ENDC)
+            sys.exit(3) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:10，代码来源:arpy.py
+
+
+示例10: raw_packet_send_arp_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def raw_packet_send_arp_requests(number_of_packets):
+    for _ in range(number_of_packets):
+        arp_request = arp.make_request(ethernet_src_mac=ethernet_src,
+                                       ethernet_dst_mac="ff:ff:ff:ff:ff:ff",
+                                       sender_mac=ethernet_src,
+                                       sender_ip=ip_src,
+                                       target_mac="00:00:00:00:00:00",
+                                       target_ip=ip_dst)
+        global_socket.send(arp_request)
+# endregion
+
+
+# region Send ARP packets in scapy 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:15，代码来源:time_test.py
+
+
+示例11: scapy_send_arp_requests
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def scapy_send_arp_requests(number_of_packets):
+    arp_request = Ether(src=ethernet_src, dst='ff:ff:ff:ff:ff:ff') /\
+                  ARP(op=1, hwsrc=ethernet_src, hwdst='00:00:00:00:00:00', psrc=ip_src, pdst=ip_dst)
+    sendp(arp_request, count=number_of_packets, verbose=False)
+# endregion
+
+
+# region Send DHCP Discover packets in raw-packet 
+开发者ID:raw-packet，项目名称:raw-packet，代码行数:10，代码来源:time_test.py
+
+
+示例12: _process_arp
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def _process_arp(self, pkt):
+        """
+        Updates ARP cache upon receiving ARP packets, only if the packet is not
+        spoofed.
+
+        """
+        try:
+            if pkt.op == 2 and pkt.hwsrc != self._host_state.host_mac:
+                self._host_state.set_ip_mac_mapping(pkt.psrc, pkt.hwsrc)
+
+        except AttributeError:
+            return 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:14，代码来源:packet_processor.py
+
+
+示例13: start
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def start(self):
+
+        with self._lock:
+            self._active = True
+
+        utils.log('[ARP Scanning] Starting.')
+        self._thread.start() 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:9，代码来源:arp_scan.py
+
+
+示例14: _arp_scan_thread_helper
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def _arp_scan_thread_helper(self):
+
+        fast_scan_start_ts = None
+
+        while True:
+
+            if not self._host_state.is_inspecting():
+                time.sleep(1)
+                continue
+
+            for ip in utils.get_network_ip_range():
+
+                sleep_time = SLOW_SCAN_SLEEP_TIME
+
+                # Whether we should scan fast or slow
+                with self._host_state.lock:
+                    fast_arp_scan = self._host_state.fast_arp_scan
+
+                # If fast scan, we do it for at most 5 mins
+                if fast_arp_scan:
+                    sleep_time = FAST_SCAN_SLEEP_TIME
+                    if fast_scan_start_ts is None:
+                        fast_scan_start_ts = time.time()
+                    else:
+                        if time.time() - fast_scan_start_ts > 300:
+                            fast_scan_start_ts = None
+                            sleep_time = SLOW_SCAN_SLEEP_TIME
+                            with self._host_state.lock:
+                                self._host_state.fast_arp_scan = False
+
+                time.sleep(sleep_time)
+
+                arp_pkt = sc.Ether(dst="ff:ff:ff:ff:ff:ff") / \
+                    sc.ARP(pdst=ip, hwdst="ff:ff:ff:ff:ff:ff")
+                sc.sendp(arp_pkt, verbose=0)
+
+                with self._lock:
+                    if not self._active:
+                        return 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:41，代码来源:arp_scan.py
+
+
+示例15: stop
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def stop(self):
+
+        with self._lock:
+            self._active = False
+
+        self._thread.join()
+
+        utils.log('[ARP Scanning] Stopped.') 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:10，代码来源:arp_scan.py
+
+
+示例16: scan
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def scan(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+
+    clients_list = []
+    for element in answered_list:
+        client_dict = {"ip": element[1].psrc, "mac": element[1].hwsrc}
+        clients_list.append(client_dict)
+    return clients_list 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:14，代码来源:network_scanner.py
+
+
+示例17: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def get_mac(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+    return answered_list[0][1].hwsrc
+
+
+# Change mac address in arp table 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:12，代码来源:arp_spoofing.py
+
+
+示例18: spoof
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def spoof(target_ip, spoof_ip):
+    target_mac = get_mac(target_ip)
+    packet = scapy.ARP(op=2, pdst=target_ip, hwdst=target_mac,
+                       psrc=spoof_ip)
+    scapy.send(packet, verbose=False)
+
+
+# Restore mac address in arp table 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:10，代码来源:arp_spoofing.py
+
+
+示例19: restore
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def restore(dest_ip, source_ip):
+    dest_mac = get_mac(dest_ip)
+    source_mac = get_mac(source_ip)
+    packet = scapy.ARP(op=2, pdst=dest_ip, hwdst=dest_mac,
+                       psrc=source_ip, hwsrc=source_mac)
+    scapy.send(packet, count=4, verbose=False) 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:8，代码来源:arp_spoofing.py
+
+
+示例20: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def get_mac(ip):
+    arp_request = scapy.ARP(pdst=ip)
+    broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast/arp_request
+    answered_list = scapy.srp(arp_request_broadcast, timeout=1,
+                              verbose=False)[0]
+    return answered_list[0][1].hwsrc 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:9，代码来源:arp_spoof_detector.py
+
+
+示例21: get_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def get_mac(ip, interface):
+    """Returns the according MAC address for the provided IP address.
+
+    Args:
+        ip (str): IP address used to get MAC address.
+        interface (str): Interface used to send ARP request.
+
+    Results:
+        According MAC address as string (11:22:33:44:55:66)
+        or None if no answer has been received.
+    """
+    ans, unans = srp(Ether(dst=ETHER_BROADCAST) / ARP(pdst=ip), timeout=2, iface=interface, inter=0.1, verbose=0)
+    for snd, rcv in ans:
+        return rcv.sprintf(r"%Ether.src%") 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:16，代码来源:util.py
+
+
+示例22: _return_to_normal
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def _return_to_normal(self):
+        """This method is called when the daemon is stopping.
+        First, sends a GARP broadcast request to all clients to tell them the real gateway.
+        Then ARP replies for existing clients are sent to the gateway.
+        If IPv6 is enabled, Apate tells the clients the real gateway via neighbor advertisements.
+        """
+        # spoof clients with GARP broadcast request
+
+        with self.sleeper:
+            sendp(
+                Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.ipv4.gateway, pdst=self.ipv4.gateway, hwdst=ETHER_BROADCAST,
+                                                 hwsrc=self.ipv4.gate_mac)) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:14，代码来源:daemon_process.py
+
+
+示例23: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def run(self):
+        """Starts multiple threads sends out packets to spoof
+        all existing clients on the network and the gateway. This packets are sent every __SLEEP seconds.
+        The existing clients (device entries) are read from the redis database.
+
+        Threads:
+            A SniffThread, which sniffs for incoming ARP packets and adds new devices to the redis db.
+            Several HostDiscoveryThread, which are searching for existing devices on the network.
+            A PubSubThread, which is listening for redis expiry messages.
+
+        Note:
+            First, ARP replies to spoof the gateway entry of existing clients arp cache are generated.
+            ARP relpies to spoof the entries of the gateway are generated next.
+            Unlike the holistic mode only packets for existing clients are generated.
+
+        """
+        try:
+            for worker in self.threads:
+                self.threads[worker].start()
+
+            # lamda expression to generate arp replies to spoof the clients
+            exp1 = lambda dev: Ether(dst=dev[1]) / ARP(op=2, psrc=self.ipv4.gateway, pdst=dev[0], hwdst=dev[1])
+
+            while not self.exit.is_set():
+                # generates packets for existing clients
+
+                sendp([p(dev) for dev in self.ipv4.redis.get_devices_values(filter_values=True) for p in (exp1,)])
+                try:
+                    with self.sleeper:
+                        self.sleeper.wait(timeout=self.__SLEEP)
+                except RuntimeError as e:
+                    # this error is thrown by the with-statement when the thread is stopped
+                    if len(e.args) > 0 and e.args[0] == "cannot release un-acquired lock":
+                        return
+                    else:
+                        raise e
+
+            self._return_to_normal()
+        except Exception as e:
+            self.logger.error("Process IPv4")
+            self.logger.exception(e) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:43，代码来源:daemon_process.py
+
+
+示例24: spoof_devices
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def spoof_devices(ip, devs, logger):
+        for entry in devs:
+            dev_hw = util.get_device_mac(entry)
+            dev_ip = devs[entry]
+            if not ip.redis.check_device_disabled(util.get_device_mac(entry)):
+                sendp(Ether(dst=dev_hw) / ARP(op=2, psrc=ip.gateway, pdst=dev_ip, hwdst=dev_hw))
+            else:
+                sendp(Ether(dst=dev_hw) / ARP(op=2, psrc=ip.gateway, pdst=dev_ip, hwdst=dev_hw, hwsrc=ip.gate_mac)) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:10，代码来源:daemon_process.py
+
+
+示例25: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def run(self):
+        """Sends broadcast ARP requests for every possible client of the network.
+        Received ARP replies are processed by a SniffThread.
+        """
+        sendp(Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.gateway, pdst=self.network)) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:7，代码来源:misc_thread.py
+
+
+示例26: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def run(self):
+        try:
+            self.conn = sqlite3.connect(self.dbfile)
+            with self.conn:
+                c = self.conn.cursor()
+                while True:
+                    try:
+                        c.execute(self._QUERY)
+                        devices = list(sum(c.fetchall(), ()))
+
+                        if devices:
+                            ans, unans = arping(devices, iface=None, verbose=0)
+                            for device in ans:
+                                ip_addr = device[1][ARP].psrc
+                                mac_addr = str(device[1][ARP].hwsrc).lower()
+                                if check_preconditions(ip_addr, mac_addr):
+                                    insert_or_update_fingerprint(self.conn, ip=ip_addr, mac=mac_addr)
+
+                        self.logger.info("checked no mode devices: " + str(devices))
+
+                        time.sleep(self._SLEEP)
+                    except sqlite3.Error as sqle:
+                        self.logger.error("a database error occurred")
+                        self.logger.exception(sqle)
+        except sqlite3.Error as sqle:
+            self.logger.error("Failed to connect to sqlite database at path %s" % (self.dbfile, ))
+            self.logger.exception(sqle)
+            raise DaemonError() 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:30，代码来源:misc_thread.py
+
+
+示例27: update_cache
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def update_cache(self):
+        try:
+            ans, unans = arping(self._router_ip + "/24",
+                                iface=self._interface, verbose=False)
+
+            self._arp_cache = []
+
+            if ans:
+                for s, r in ans:
+                    self._arp_cache.append([r[ARP].psrc, r[Ether].src.lower()])
+
+            _LOGGER.debug("ARP cache: %s", self._arp_cache)
+        except Exception as e:
+            _LOGGER.error("Error when trying update ARP cache: %s", str(e)) 
+开发者ID:pilotak，项目名称:HomeAssistant-CustomComponents，代码行数:16，代码来源:arpspoof.py
+
+
+示例28: spoof
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def spoof(self, index):
+        try:
+            victimIP = self._devices[index][0]
+            victimMAC = self._devices[index][1]
+
+            try:
+                send(ARP(op=2, pdst=victimIP, psrc=self._router_ip,
+                         hwdst=victimMAC), iface=self._interface, verbose=False)
+                send(ARP(op=2, pdst=self._router_ip, psrc=victimIP,
+                         hwdst=self._router_mac), iface=self._interface, verbose=False)
+            except:
+                _LOGGER.error("Error when trying to spoof device IP: %s MAC: %s",
+                              victimIP, victimMAC)
+        except IndexError:
+            _LOGGER.error("Error when trying to spoof device index: %s", index) 
+开发者ID:pilotak，项目名称:HomeAssistant-CustomComponents，代码行数:17，代码来源:arpspoof.py
+
+
+示例29: getMAC
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import ARP [as 别名]
+def getMAC(self, IP, name):
+        """
+        Fetches MAC address of the selected IP
+        """
+
+        arp_packet = scapy.ARP(pdst=IP)
+        broadcast = scapy.Ether(dst='ff:ff:ff:ff:ff:ff')
+        arp_broadcast = broadcast/arp_packet
+        broadcast = scapy.srp(arp_broadcast, timeout=1, verbose=False)[0]
+        mac_addr_str = self.capture_output(broadcast)
+        mac_addr = re.findall(r'\w\w:\w\w:\w\w:\w\w:\w\w:\w\w',
+                              mac_addr_str)[0]
+        mac_addr = str(mac_addr).strip()
+
+        colors.success('Found MAC address for {} : {} is : {}'
+                       .format(name, IP, mac_addr))
+        val = str(input('>> Enter(Y/y) to continue or enter MAC address : '))\
+            .strip()
+        if val == 'Y' or val == 'y':
+            return mac_addr
+        elif self.validateMAC(val):
+            colors.info('Setting MAC address for {} : {} : {}'
+                        .format(name, IP, val))
+            return val
+        else:
+            colors.error('Please enter a valid MAC address...')
+            self.getMAC(IP, name) 
+开发者ID:abhisharma404，项目名称:vault，代码行数:29，代码来源:arp_spoofer.py

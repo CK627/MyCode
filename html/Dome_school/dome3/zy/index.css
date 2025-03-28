@@ -1,0 +1,10 @@
+body {
+    text-align: center;
+}
+
+h1 {
+    text-align: center;
+}
+table {
+    margin: 0 auto; /* 让表格水平居中 */
+}

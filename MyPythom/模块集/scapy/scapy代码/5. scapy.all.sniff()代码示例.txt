@@ -1,0 +1,657 @@
+示例1: start
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def start(self):
+        self.logger.debug('Starting monitoring on %s', self.iface_manager.iface)
+        self.iface_manager.start()
+        while True:
+            try:
+                # macOS
+                if platform.system() == 'Darwin':
+                    self.logger.warning('macOS support is pre-alpha - many improvements coming soon')
+                    scapy.sniff(iface=self.iface_manager.iface, monitor=True, prn=self.process_packet, store=0)
+                    break
+                # linux
+                else:
+                    # For versions of scapy that don't provide the exceptions kwarg
+                    scapy.sniff(iface=self.iface_manager.iface, prn=self.process_packet, store=0)
+                    break
+
+            except TJException:
+                raise
+            except (OSError, IOError):
+                self.logger.error(traceback.format_exc())
+                self.logger.info('Sniffer error occurred. Restarting sniffer in 3 seconds...')
+                time.sleep(3) 
+开发者ID:calebmadrigal，项目名称:trackerjacker，代码行数:24，代码来源:__main__.py
+
+
+
+ 
+示例2: _capture_packets
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def _capture_packets(self):
+
+        while self._is_active():
+            if not self._host_state.is_inspecting():
+                time.sleep(2)
+                continue
+
+            result = utils.safe_run(sc.sniff, kwargs={
+                'prn': self._host_state.packet_processor.process_packet,
+                'stop_filter':
+                    lambda _:
+                        not self._is_active() or
+                        not self._host_state.is_inspecting(),
+                'timeout': 30
+            })
+
+            if isinstance(result, utils._SafeRunError):
+                time.sleep(1) 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:20，代码来源:packet_capture.py
+
+
+示例3: filter_string
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def filter_string(self):
+        """Create filter string for scapy sniff() function."""
+        if self.test_params.ip_version == 4:
+            return (
+                "udp and (dst host "
+                + DNS_SD_MULTICAST_IPV4
+                + " or dst host "
+                + str(self.test_params.src_endpoint.ip_addr)
+                + ") and (src host "
+                + str(self.test_params.dst_endpoint.ip_addr)
+                + ") and (dst port 5353 or src port 5353)"
+            )
+        elif self.test_params.ip_version == 6:
+            return (
+                "udp and (dst host "
+                + DNS_SD_MULTICAST_IPV6
+                + " or dst host "
+                + str(self.test_params.src_endpoint.ipv6_addr)
+                + ") and (src host "
+                + str(self.test_params.dst_endpoint.ip_addr)
+                + ") and (dst port 5353 or src port 5353)"
+            )
+        return None 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:25，代码来源:mdns_utils.py
+
+
+
+ 
+示例4: ping
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def ping(test_params, show_result=False):
+        """Check mDNS service availability by sending ping packet and waiting for response."""
+        if not test_params:
+            return None
+        query = DNS_SD_QUERY
+        mdns_sniffer = MulticastDNSSniffer(test_params, query)
+        thread = threading.Thread(target=mdns_send_query, args=(test_params, query))
+        thread.start()
+        print_verbose(test_params, "filter: {}".format(mdns_sniffer.filter_string()))
+        sniff(
+            filter=mdns_sniffer.filter_string(),
+            prn=mdns_sniffer.filter_action,
+            count=10000,
+            timeout=test_params.timeout_sec + 2,
+        )
+        print_verbose(
+            test_params, "received mDNS response: {}".format(mdns_sniffer.server_alive)
+        )
+        return mdns_sniffer.server_alive 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:21，代码来源:mdns_utils.py
+
+
+示例5: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def run(iface, local_ip, sniff_filter, spoof_domains):
+    print("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#")
+    print("-#-#-#-#-#-RUNNING DNS SPOOFER-#-#-#-#-#-")
+    print("#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#")
+    print("Interface:\t\t\t%s" % iface)
+    print("Resolving to IP:\t\t%s" % local_ip)
+    print("Spoof domains:\t\t%s" % ', '.join(spoof_domains))
+    print("BPF sniff filter:\t\t%s" % sniff_filter)
+    print("")
+    print("Waiting for DNS requests...")
+    print("(Make sure the device you are targeting is set to use"\
+            "your local IP (%s) as its DNS server)" % local_ip)
+
+    scapy.sniff(iface=iface,
+                filter=sniff_filter,
+                prn=handle_packet_fn(iface, local_ip, spoof_domains)) 
+开发者ID:robert，项目名称:how-to-build-a-tcp-proxy，代码行数:18，代码来源:fake_dns_server.py
+
+
+
+ 
+示例6: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def run(self):
+        # TODO this loop could be reconciled with the ofp Connection to become a
+        # single select loop.
+        self.sock = s = conf.L2listen(
+            type=ETH_P_ALL,
+            iface=self.iface,
+            filter='inbound'
+        )
+        while not self.finished:
+            try:
+                sniffed = sniff(1, iface=self.iface, timeout=1, opened_socket=s)
+                print 'Sniffer received %d packet(s)' % len(sniffed)
+                for pkt in sniffed:
+                    self.forward_packet(pkt)
+
+            except Exception, e:
+                logging.error("scapy.sniff error: %s" % e) 
+开发者ID:opencord，项目名称:voltha，代码行数:19，代码来源:mock.py
+
+
+示例7: arp_monitor
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def arp_monitor(self):
+        """
+        Simplistic ARP Monitor
+
+        This program uses the sniff() callback (parameter prn). The store
+        parameter is set to 0 so that the sniff() function will not store
+        anything (as it would do otherwise) and thus can run forever.
+
+        The filter parameter is used for better performances on high load:
+        The filter is applied inside the kernel and Scapy will only see ARP traffic.
+
+        -- https://scapy.readthedocs.io/en/latest/usage.html#simplistic-arp-monitor
+        """
+        log.info('Waiting for any devices having MAC address prefixes of {} '
+                 'to appear on your local network'.format(self.mac_prefixes))
+        #sniff(prn=self.arp_monitor_callback, filter="arp", store=0)
+        sniff(prn=self.check_esp32, filter="arp", store=0) 
+开发者ID:hiveeyes，项目名称:terkin-datalogger，代码行数:19，代码来源:terkin.py
+
+
+示例8: start_poisen
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def start_poisen(target, interface, scapy_filter):
+    vpoison = threading.Thread(target=poison)
+    vpoison.setDaemon(True)
+    vthread.append(vpoison)
+    vpoison.start()
+
+    gwpoison = threading.Thread(target=gw_poison)
+    gwpoison.setDaemon(True)
+    gwthread.append(gwpoison)
+    gwpoison.start()
+    if dns_sniff or dns_sniff_gource:
+        pkt = scapy.sniff(iface=interface,filter=scapy_filter,prn=dnshandle)
+    else:
+        pkt = scapy.sniff(iface=interface,filter=scapy_filter,prn=rawhandle) 
+开发者ID:ivanvza，项目名称:arpy，代码行数:16，代码来源:arpy.py
+
+
+示例9: sniff
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def sniff(self, target=None, iface=None):
+        def _process(pkt):
+            match_ip = pkt.haslayer(IP) and (pkt[IP].src == target[0] or pkt[IP].dst == target[0]) if target else True
+            match_port = pkt.haslayer(TCP) and (
+                pkt[TCP].sport == target[1] or pkt[TCP].dport == target[1]) if len(target) == 2 else True
+            if match_ip and match_port:
+                self.capabilities.insert(pkt, client=False)
+                events = self.capabilities.get_events()         # misuse get_events :/
+                if events:
+                    strconn = {'src': None,
+                               'dst': None,
+                               'sport': None,
+                               'dport': None}
+
+                    if pkt.haslayer(IP):
+                        strconn['src'] = pkt[IP].src
+                        strconn['dst'] = pkt[IP].dst
+                    if pkt.haslayer(TCP):
+                        strconn['sport'] = pkt[TCP].sport
+                        strconn['dport'] = pkt[TCP].dport
+
+                    print ("Connection: %(src)s:%(sport)d <==> %(dst)s:%(dport)d" % strconn)
+                    print ("* EVENT - " + "\n* EVENT - ".join(e[0] for e in events))
+            return
+        if iface:
+            conf.iface = iface
+        while True:
+            bpf = None
+            if len(target):
+                bpf = "host %s" % target[0]
+            if len(target) == 2:
+                bpf += " and tcp port %d" % target[1]
+            sniff(filter=bpf,
+                  prn=_process,
+                  store=0,
+                  timeout=3) 
+开发者ID:tintinweb，项目名称:scapy-ssl_tls，代码行数:38，代码来源:security_scanner.py
+
+
+示例10: waitForPacket
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def waitForPacket(self, state=None, filterfct=None, timeout=None,
+            buffermode=False, **kargs):
+        """Wait for one packet matching a filter function
+
+        state: initial state, may be empty but should be a valid state
+            instance.
+        filterfct: boolean function applied on a packet received to select it
+            or not. Ex: lambda pkt: pkt.haslayer("TCP")
+        other args: extra args for sniff function of scapy"""
+
+        if state is None:
+            if self.state is None:
+                raise Exception("A state object must be given as parameter when \
+                    waiting for a packet if no initstate entered in the Tester.")
+            state = self.state
+        else:
+            self.state.update(state)
+        if timeout:
+            tOut = " (timeout after " + str(timeout) + " secs)"
+        else: tOut = ""
+        self.debug("Sniffing using custom function..." + tOut, level=2)
+#         if buffermode:
+#             # in buffermode, the packets are stored in buf and they are transmitted
+#             # to user only when a UDP signal is encountered
+#             buf = sniff(count=0, lfilter=lambda pkt: filterfct(pkt) or \
+#                     pkt.haslayer(UDP), filter="udp or tcp",
+#                     stop_filter=lambda pkt: pkt.haslayer(UDP),
+#                     timeout=timeout, **kargs)
+#             self.sendAck(buf[-1].getlayer("IP").src)
+#             return buf[:-1]
+
+        pkts = sniff(count=1, lfilter=filterfct, filter="tcp",
+                    timeout=timeout, **kargs)
+        if pkts is None or len(pkts) == 0:
+            raise PktWaitTimeOutException(timeout)
+        return pkts[0].getlayer("IP") 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:38，代码来源:core.py
+
+
+示例11: main
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def main():
+    # All code is in main function because no higher level wrapper functions are needed for scapy
+
+    # Argparse setup
+    parser = argparse.ArgumentParser(description="Packet sniffer")
+    parser.add_argument("--iface", type=str, help="interface to sniff")
+    parser.add_argument("--filter", type=str, help="bpf filter string")
+    parser.add_argument("--outfile", type=str, help="Pcap file to output")
+    args = parser.parse_args()
+
+    if not args.iface:
+        # Needs an interface
+        print("--iface required")
+        exit()
+
+    # Default Values for opts
+    outfile = "out.pcap"
+    filt = None
+    try:
+        pkts = scapy.sniff(filter=filt, iface=args.iface)
+        scapy.wrpcap(outfile, pkts)
+
+    except PermissionError:
+        # Raw sockets require root privs
+        print("Must run as root")
+        exit() 
+开发者ID:Naategh，项目名称:PyCk，代码行数:28，代码来源:sniff.py
+
+
+示例12: __init__
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def __init__(self, config):
+        super(CredentialSniffer, self).__init__(config, "credentialsniffer")
+        self.running_interface = self.config["sniffing_interface"]
+        self.running_bssid = self.config["bssid"]
+        self.running_ssid = self.config["ssid"]
+        self.log_dir = self.config["log_dir"]
+        self.wifi_clients = {}
+        self.wpa_handshakes = {}
+        self.broadcasted_bssids = {}  # bssid: beacon_packet
+
+        self.sniffer_thread = None
+        self.should_stop = False
+        self.log_lock = Lock()
+
+        try:
+            self.fixed_channel = int(self.config["fixed_sniffing_channel"])
+        except:
+            self.fixed_channel = 7
+
+        try:
+            self.timeout = int(self.config["timeout"])
+        except:
+            self.timeout = 30
+
+        # When sniffing for credentials on interface running in Master mode
+        # scapy will only be able to sniff for layer 3 packets (Networking)
+        # so it never receives a Beacon packet (layer2) to verify the access point ssid
+        # best to pass it as parameter since we are running the access point we know the ssid
+        self.is_ap = False
+
+    # This will be called by the AirSniffer 
+开发者ID:Esser420，项目名称:EvilTwinFramework，代码行数:33，代码来源:credentialsniffer.py
+
+
+示例13: start_credential_sniffing
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def start_credential_sniffing(self):
+        # TODO map packets to interface with threads
+        try:
+            sniff(  store       =   0,
+                    prn         =   self.extract_credential_info,
+                    stop_filter =   self._stop)
+        except Exception as e:
+            print "Error Occurred while sniffing."
+            print str(e) 
+开发者ID:Esser420，项目名称:EvilTwinFramework，代码行数:11，代码来源:credentialsniffer.py
+
+
+示例14: sniff_packet
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def sniff_packet(interface):
+    scapy.sniff(iface=interface, store=False, prn=process_packets) 
+开发者ID:mpostument，项目名称:hacking_tools，代码行数:4，代码来源:arp_spoof_detector.py
+
+
+示例15: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def run(self):
+        """Starts sniffing for incoming ARP packets with scapy.
+        Actions after receiving a packet ar defines via _packet_handler.
+        """
+        # the filter argument in scapy's sniff function seems to be applied too late
+        # therefore some unwanted packets are processed (e.g. tcp packets of ssh session)
+        # but it still decreases the number of packets that need to be processed by the lfilter function
+        sniff(prn=self._packet_handler, filter=self._SNIFF_FILTER(), lfilter=self._LFILTER, store=0, iface=self.interface) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:10，代码来源:sniff_thread.py
+
+
+示例16: listen
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def listen():
+    app_exfiltrate.log_message('info', "[icmp] Listening for ICMP packets..")
+    # Filter for echo requests only to prevent capturing generated replies
+    scapy.sniff(filter="icmp and icmp[0]=8", prn=analyze) 
+开发者ID:sensepost，项目名称:DET，代码行数:6，代码来源:icmp.py
+
+
+示例17: main
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def main(args):
+    """Set up reflector detection sniffer based on command line parameters."""
+    check_caps()
+    options = amplifier_parse_args(args)
+
+    dest_ip = options.dest_ip
+    dest_port = parse_port(options.port)
+
+    sniffer = ReflectorSniffer(options)
+
+    # Setup sniff, filtering for IP traffic
+    filter_string = "udp and host " + dest_ip
+    if dest_port is not None and dest_port > 0:
+        filter_string += " and port " + str(dest_port)
+
+    print ("[.] Starting sniffing with filter: {}".format(filter_string))
+
+    try:
+        if options.nr > 0:
+            print ("Press CTRL-C to finish")
+            sniff(filter=filter_string, prn=sniffer.filter_action, count=options.nr)
+        print ("[.] Finished sniffing")
+    except KeyboardInterrupt:
+        print ("\nExiting...")
+    finally:
+        print (sniffer) 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:28，代码来源:amplifier_detector.py
+
+
+示例18: mdns_query
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def mdns_query(test_params, query):
+    """Perform mDNS query and returns response."""
+    mdns_sniffer = MulticastDNSSniffer(test_params, query)
+    thread = threading.Thread(target=mdns_send_query, args=(test_params, query))
+    thread.start()
+    sniff(
+        filter=mdns_sniffer.filter_string(),
+        prn=mdns_sniffer.filter_action,
+        count=10000,
+        timeout=test_params.timeout_sec + 2,
+    )
+    if mdns_sniffer.server_alive:
+        print (
+            "[+] Server {}:{} responded for query: {} with following records:".format(
+                test_params.dst_endpoint.ip_addr, test_params.dst_endpoint.port, query
+            )
+        )
+        for response in mdns_sniffer.server_response:
+            print ("\t{}".format(response))
+    else:
+        print (
+            "[-] Server {}:{} is not responding for query: {}".format(
+                test_params.dst_endpoint.ip_addr, test_params.dst_endpoint.port, query
+            )
+        )
+    return mdns_sniffer.server_response 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:28，代码来源:mdns_utils.py
+
+
+示例19: main
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def main():
+    print (__doc__)
+    if len(sys.argv) <= 3:
+        print ("USAGE: <mode> <host> <port> [starttls] [num_worker] [interface]")
+        print ("       mode     ... client | sniff")
+        print ("       starttls ... starttls keyword e.g. 'starttls\\n' or 'ssl\\n'")
+        print ("available interfaces")
+        for i in get_if_list():
+            print ("   * %s" % i)
+        exit(1)
+    mode = sys.argv[1]
+    starttls = sys.argv[4] if len(sys.argv) > 4 else None
+    host = sys.argv[2]
+    port = int(sys.argv[3])
+    num_workers = 10 if not len(sys.argv) > 5 else int(sys.argv[5])
+    iface = "eth0" if not len(sys.argv) > 6 else sys.argv[6]
+
+    scanner = TLSScanner(workers=num_workers)
+    if mode == "sniff":
+        print ("[*] [passive] Scanning in 'sniff' mode for %s on %s..." % (repr((host, port)), iface))
+        scanner.sniff((host, port), iface=iface)
+    else:
+        print ("[*] [active] Scanning with %s parallel threads..." % num_workers)
+        t_start = time.time()
+        scanner.scan((host, port), starttls=starttls)
+        print ("\n")
+        print ("[*] Capabilities (Debug)")
+        print (scanner.capabilities)
+        print ("[*] supported ciphers: %s/%s" % (
+            len(scanner.capabilities.info.server.ciphers), len(TLS_CIPHER_SUITES) + len(SSLv2_CIPHER_SUITES)))
+        print (" * " + "\n * ".join(
+            ("%s (0x%0.4x)" % (TLS_CIPHER_SUITES.get(c, "SSLv2_%s" % SSLv2_CIPHER_SUITES.get(c, c)), c) for c in
+             scanner.capabilities.info.server.ciphers)))
+        print ("")
+        print (
+            "[*] supported protocol versions: %s/%s" %
+            (len(
+                scanner.capabilities.info.server.versions),
+                len(TLS_VERSIONS)))
+        print (" * " + "\n * ".join(
+            ("%s (0x%0.4x)" % (TLS_VERSIONS.get(c, c), c) for c in scanner.capabilities.info.server.versions)))
+        print ("")
+        print ("[*] supported compressions methods: %s/%s" % (
+            len(scanner.capabilities.info.server.compressions), len(TLS_COMPRESSION_METHODS)))
+        print (" * " + "\n * ".join(("%s (0x%0.4x)" % (TLS_COMPRESSION_METHODS.get(c, c), c) for c in
+                                     scanner.capabilities.info.server.compressions)))
+        print ("")
+        events = scanner.capabilities.get_events()
+        print ("[*] Events: %s" % len(events))
+        print ("* EVENT - " + "\n* EVENT - ".join(e[0] for e in events))
+        t_diff = time.time() - t_start
+        print ("")
+        print ("Scan took: %ss" % t_diff) 
+开发者ID:tintinweb，项目名称:scapy-ssl_tls，代码行数:55，代码来源:security_scanner.py
+
+
+示例20: sniff
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def sniff(self, target=None, iface=None, timeout=3):
+        """Initiate sniffing process (passive)."""
+
+        def _process(pkt):
+            match_ip = (
+                pkt.haslayer(IP)
+                and (pkt[IP].src == target[0] or pkt[IP].dst == target[0])
+                if target
+                else True
+            )
+            match_port = (
+                pkt.haslayer(UDP)
+                and (pkt[UDP].sport == target[1] or pkt[UDP].dport == target[1])
+                if target and len(target) == 2
+                else True
+            )
+            if match_ip and match_port:
+                self.capabilities.insert(pkt, client=False)
+                events = self.capabilities.get_events()  # misuse get_events :/
+                if events:
+                    strconn = {"src": None, "dst": None, "sport": None, "dport": None}
+
+                    if pkt.haslayer(IP):
+                        strconn["src"] = pkt[IP].src
+                        strconn["dst"] = pkt[IP].dst
+                    if pkt.haslayer(UDP):
+                        strconn["sport"] = pkt[UDP].sport
+                        strconn["dport"] = pkt[UDP].dport
+
+                    print (
+                        "Connection: %(src)s:%(sport)d <==> %(dst)s:%(dport)d" % strconn
+                    )
+                    print ("* EVENT - " + "\n* EVENT - ".join(e[0] for e in events))
+            return
+
+        if iface:
+            print ("Choosen interface = {} ".format(iface))
+        #     conf.iface = iface
+        while True:
+            bpf = None
+            if target:
+                bpf = "host %s" % target[0]
+                if len(target) == 2:
+                    bpf += " and udp port %d" % target[1]
+            sniff(filter=bpf, prn=_process, store=0, timeout=timeout) 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:47，代码来源:active_scanner.py
+
+
+示例21: main
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sniff [as 别名]
+def main():
+    global config
+    parser = argparse.ArgumentParser(description='mitm6 - pwning IPv4 via IPv6\nFor help or reporting issues, visit https://github.com/fox-it/mitm6', formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-i", "--interface", type=str, metavar='INTERFACE', help="Interface to use (default: autodetect)")
+    parser.add_argument("-l", "--localdomain", type=str, metavar='LOCALDOMAIN', help="Domain name to use as DNS search domain (default: use first DNS domain)")
+    parser.add_argument("-4", "--ipv4", type=str, metavar='ADDRESS', help="IPv4 address to send packets from (default: autodetect)")
+    parser.add_argument("-6", "--ipv6", type=str, metavar='ADDRESS', help="IPv6 link-local address to send packets from (default: autodetect)")
+    parser.add_argument("-m", "--mac", type=str, metavar='ADDRESS', help="Custom mac address - probably breaks stuff (default: mac of selected interface)")
+    parser.add_argument("-a", "--no-ra", action='store_true', help="Do not advertise ourselves (useful for networks which detect rogue Router Advertisements)")
+    parser.add_argument("-v", "--verbose", action='store_true', help="Show verbose information")
+    parser.add_argument("--debug", action='store_true', help="Show debug information")
+
+    filtergroup = parser.add_argument_group("Filtering options")
+    filtergroup.add_argument("-d", "--domain", action='append', default=[], metavar='DOMAIN', help="Domain name to filter DNS queries on (Whitelist principle, multiple can be specified.)")
+    filtergroup.add_argument("-b", "--blacklist", action='append', default=[], metavar='DOMAIN', help="Domain name to filter DNS queries on (Blacklist principle, multiple can be specified.)")
+    filtergroup.add_argument("-hw", "--host-whitelist", action='append', default=[], metavar='DOMAIN', help="Hostname (FQDN) to filter DHCPv6 queries on (Whitelist principle, multiple can be specified.)")
+    filtergroup.add_argument("-hb", "--host-blacklist", action='append', default=[], metavar='DOMAIN', help="Hostname (FQDN) to filter DHCPv6 queries on (Blacklist principle, multiple can be specified.)")
+    filtergroup.add_argument("--ignore-nofqdn", action='store_true', help="Ignore DHCPv6 queries that do not contain the Fully Qualified Domain Name (FQDN) option.")
+
+    args = parser.parse_args()
+    config = Config(args)
+
+    print('Starting mitm6 using the following configuration:')
+    print('Primary adapter: %s [%s]' % (config.default_if, config.selfmac))
+    print('IPv4 address: %s' % config.selfipv4)
+    print('IPv6 address: %s' % config.selfaddr)
+    if config.localdomain is not None:
+        print('DNS local search domain: %s' % config.localdomain)
+    if not config.dns_whitelist and not config.dns_blacklist:
+        print('Warning: Not filtering on any domain, mitm6 will reply to all DNS queries.\nUnless this is what you want, specify at least one domain with -d')
+    else:
+        if not config.dns_whitelist:
+            print('DNS whitelist: *')
+        else:
+            print('DNS whitelist: %s' % ', '.join(config.dns_whitelist))
+        if config.dns_blacklist:
+            print('DNS blacklist: %s' % ', '.join(config.dns_blacklist))
+    if config.host_whitelist:
+        print('Hostname whitelist: %s' % ', '.join(config.host_whitelist))
+    if config.host_blacklist:
+        print('Hostname blacklist: %s' % ', '.join(config.host_blacklist))
+
+    #Main packet capture thread
+    d = threads.deferToThread(sniff, iface=config.default_if, filter="ip6 proto \\udp or arp or udp port 53", prn=lambda x: reactor.callFromThread(parsepacket, x), stop_filter=should_stop)
+    d.addErrback(print_err)
+
+    #RA loop
+    if not args.no_ra:
+        loop = task.LoopingCall(send_ra)
+        d = loop.start(30.0)
+        d.addErrback(print_err)
+
+    # Set up DNS
+    dnssock = setupFakeDns()
+    reactor.adoptDatagramPort(dnssock.fileno(), socket.AF_INET6, DatagramProtocol())
+
+    reactor.addSystemEventTrigger('before', 'shutdown', shutdownnotice)
+    reactor.run() 
+开发者ID:fox-it，项目名称:mitm6，代码行数:60，代码来源:mitm6.py

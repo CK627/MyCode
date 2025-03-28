@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员注册</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <form class="register-form" id="registerForm">
+        <h1 class="form-title">会员注册</h1>
+        <div class="form-group">
+            <label>性质：</label>
+            <label>
+                <input type="radio" name="accountType" value="personal" checked> 个人
+            </label>
+            <label>
+                <input type="radio" name="accountType" value="company"> 公司
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="nickname">昵称：</label>
+            <input type="text" id="nickname" placeholder="小明" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">密码：</label>
+            <input type="password" id="password" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">电子邮箱：</label>
+            <input type="email" id="email" placeholder="123456@126.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="location">所在地：</label>
+            <select id="location">
+                <option value="">请选择省份</option>
+                <option>浙江省</option>
+                <option>江苏省</option>
+                <option>上海市</option>
+                <option>北京市</option>
+                <option>广东省</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="idNumber">身份证号：</label>
+            <input type="text" id="idNumber" pattern="\d{17}[\dXx]" required>
+        </div>
+
+        <div class="form-group">
+            <label for="feedback">意见反馈：</label>
+            <textarea id="feedback" rows="5"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">提交</button>
+            <button type="reset">重置</button>
+        </div>
+    </form>
+
+    <script src="index.js"></script>
+</body>
+</html>

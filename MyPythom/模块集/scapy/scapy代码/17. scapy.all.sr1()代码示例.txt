@@ -1,0 +1,608 @@
+示例1: checkMPTCPSupportViaRST
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def checkMPTCPSupportViaRST(port,target,timeout,localIP,MpCapAlreadyPassed=False):
+    MpCapPassed = MpCapAlreadyPassed
+    #TODO: Abstract this out more elegantly so i dont repeat code from elsewhere
+    if not MpCapPassed:
+        pkt = makeMPCapableSyn(localIP, port, target)
+        response=sr1(pkt,timeout=timeout)
+        if response and getMpOption(pkt.getlayer("TCP")) is not None:
+            MpCapPassed = True
+
+    if MpCapPassed:
+        pkt = makeJoinSyn(localIP, port, target)
+        response=sr1(pkt,timeout=timeout)
+        #TODO: Add checks for other types of response (such as ICMP)
+        #TODO: Make this clearer
+
+        #Check for the flag with a mask
+        print response.getlayer("TCP").flags
+        if (0x04 & response.getlayer("TCP").flags) == 0x04:
+            print "RST Test indicates MPTCP support"
+            return True
+        else:
+            print "RST Test indicates host doesn't understand MPTCP"
+            return False 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:25，代码来源:mptcp_scanner.py
+
+
+
+ 
+示例2: joinScan
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def joinScan(targetIPList,portList,localIP,reuseRandoms=False,timeout=None):
+    #TODO: Add return details
+    #TODO: Decide where this fits in the workflow, after an open TCP port maybe?
+    #TODO: Decide how we want to handle the return values from this
+    raise NotImplementedError
+    #The option to reuse random numbers for "increased speed"
+    if reuseRandoms:
+        sourceAddr   = localIP
+        sport       = randintb(16)
+        initSeq     = randintb(32)
+
+    if timeout is None: timeout=5
+
+    for targetIP in targetIPList:
+        for port in portList:
+            #First send a packet and see if we get a TCP response
+            pkt = makeMPCapableSyn(localIP,port,targetIP)
+            response=sr1(pkt,timeout=timeout)
+            if response is not None:
+                #if we do then send an invalid MPTCP join and see if we get a RST
+                pkt = makeJoinSyn(sourceAddr, port, targetIP)
+                response2=sr1(pkt,timeout=timeout)
+                #If we get a RST then we know this host supports MPTCP
+                if response2 is None:
+                    print "Target supports MPTCP but is being shifty"
+                #If we get a normal TCP reply we know it doesn't
+                else:
+                    mpopt = getMpOption(pkt.getlayer("TCP"))
+                    if mpopt is None:
+                        print "We have a normal TCP packet here"
+                    else:
+                        print "This header contains the following MPTCP options:",
+                        for mpo in mpopt:
+                            print mpo.name
+                #If we get an MPACK then the host is HORRIBLY broken somehow
+            else:
+                #If we don't then this is just a vanilla TCP
+                print "The host seems down?" 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:40，代码来源:mptcp_scanner.py
+
+
+示例3: run
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def run(self, state, pkt, wait,timeout=None):
+        """Send pkt, receive the answer if wait is True, and return a tuple
+        (validity of reply packet, reply packet). If no test function is
+        given, assume it's valid."""
+        self.dbgshow(pkt)
+        if wait: # do we wait for a reply ?
+            self.debug("Waiting for packet...", level=2)
+            if pkt is None:
+                timeout, buffermode = None, False
+                if type(wait) is tuple:
+                    wait, timeout, buffermode = wait
+                    #print wait
+                    #wait, buffermode = wait
+                if hasattr(wait, '__call__'):
+                    ans = self.waitForPacket(filterfct=wait, timeout=timeout)
+#                     if buffermode: # ans is a buffer (list)
+#                         self.debug("Entering buffer mode.", level=1)
+#                         return [self.packetReceived(pkt,buffermode=True) for pkt in ans]
+                else:
+                    raise Exception("error, no packet generated.")
+            else:
+                #TODO: Make sure this waits continuously in a non blocking mode, convert this to dumping from a queue
+                ans=sr1(pkt)
+        else:
+            send(pkt)
+            #print pkt
+            self.first = True # prev_pkt shouldnt be taken into account
+            self.debug("Packet sent, no waiting, going on with next.",2)
+            return (True, None) # no reply, no check
+        return self.packetReceived(ans) # post-reply actions 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:32，代码来源:core.py
+
+
+
+ 
+示例4: detect
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def detect(self, dst_port):
+        with get_safe_src_port() as src_port:
+            for _ in range(CFG_RETRANSMISSION_RATE):
+                # We start by adding normal TCP Options
+                tcp_options = [(TCP_OPTION_MSS, struct.pack('>H', 1460)),
+                               (TCP_OPTION_NOP, b''),
+                               # WNDSCL option with invalid length,
+                               # followed by a valid one:
+                               (TCP_OPTION_WNDSCL, b''),
+                               (TCP_OPTION_WNDSCL, b'\0')]
+
+                pkt = IP(dst=self._target) / TCP(sport=src_port,
+                                                 dport=dst_port,
+                                                 flags=TCP_SYN_FLAG,
+                                                 options=tcp_options)
+                response = sr1(pkt, verbose=False, timeout=CFG_PACKET_TIMEOUT)
+                if response is not None:
+                    break
+
+            if response is None:
+                self.vxworks_score = 0
+                self.ipnet_score = 50
+            elif (validate_flags(response, TCP_RST_FLAG) and
+                  validate_ports(response, dst_port, src_port)):
+                self.vxworks_score = 100
+                self.ipnet_score = 100
+            else:
+                self.vxworks_score = -100
+                self.ipnet_score = -100 
+开发者ID:ArmisSecurity，项目名称:urgent11-detector，代码行数:31，代码来源:urgent11_detector.py
+
+
+示例5: execute
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def execute(self):
+        config = get_config()
+        logger.debug("Attempting to get kube-dns pod ip")
+        self_ip = sr1(IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.netork_timeout)[IP].dst
+        cbr0_ip, cbr0_mac = self.get_cbr0_ip_mac()
+
+        kubedns = self.get_kube_dns_ip_mac()
+        if kubedns:
+            kubedns_ip, kubedns_mac = kubedns
+            logger.debug(f"ip={self_ip} kubednsip={kubedns_ip} cbr0ip={cbr0_ip}")
+            if kubedns_mac != cbr0_mac:
+                # if self pod in the same subnet as kube-dns pod
+                self.publish_event(PossibleDnsSpoofing(kubedns_pod_ip=kubedns_ip))
+        else:
+            logger.debug("Could not get kubedns identity") 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:17，代码来源:dns.py
+
+
+
+ 
+示例6: try_getting_mac
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def try_getting_mac(self, ip):
+        config = get_config()
+        ans = sr1(ARP(op=1, pdst=ip), timeout=config.network_timeout, verbose=0)
+        return ans[ARP].hwsrc if ans else None 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:6，代码来源:arp.py
+
+
+示例7: execute
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def execute(self):
+        config = get_config()
+        self_ip = sr1(IP(dst="1.1.1.1", ttl=1) / ICMP(), verbose=0, timeout=config.network_timeout)[IP].dst
+        arp_responses, _ = srp(
+            Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(op=1, pdst=f"{self_ip}/24"), timeout=config.network_timeout, verbose=0,
+        )
+
+        # arp enabled on cluster and more than one pod on node
+        if len(arp_responses) > 1:
+            # L3 plugin not installed
+            if not self.detect_l3_on_host(arp_responses):
+                self.publish_event(PossibleArpSpoofing()) 
+开发者ID:aquasecurity，项目名称:kube-hunter，代码行数:14，代码来源:arp.py
+
+
+示例8: defaultScan
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def defaultScan(targetIPList,portList,localIP=None,checkHostUp=True,reuseRandoms=False,timeout=None):
+    #The option to reuse random numbers for "increased speed"
+    if reuseRandoms:
+        sourcAddr   = localIP
+        sport       = randintb(16)
+        initSeq     = randintb(32)
+
+    if timeout is None: timeout=5
+
+#Form of results
+#     results = {"targetIP":
+#                [{"porta","ResponseType"},
+#                 {"porta","ResponseType"},
+#                 {"porta","ResponseType"}
+#                 ]
+#                }
+
+    results = {}
+
+    for targetIP in targetIPList:
+        print "Testing:", targetIP,
+        localIP = localIP if localIP else get_local_ip_address(targetIP)
+
+        gatewayIP = Route().route(str(targetIP))[2]
+        if checkHostUp and gatewayIP == '0.0.0.0':
+            print "... on local network...",
+            arpadd = getmacbyip(str(targetIP))
+            if arpadd == None:
+                print " not got MAC, skipping"
+                continue
+            if arpadd == "ff:ff:ff:ff:ff:ff":
+                print "This appears to be localhost?"
+            else:
+                print " at ARP:", arpadd
+        else:
+            print "Via", gatewayIP, " Not on local network"
+
+        for port in portList:
+            pkt = makeMPCapableSyn(localIP,port,targetIP)
+            response=sr1(pkt,timeout=timeout)
+            if response is None:
+                pass
+                #print "No pkt received from ", targetIP,":", port
+            else:
+                processedResponse = processResponsePacketSimple(response,targetIP,localIP,port,timeout)
+
+                if targetIP in results:
+                    if processedResponse is not None: results[targetIP].append(processedResponse)
+                else:
+                    if processedResponse is not None: results[targetIP] = [processedResponse]
+            #if True or port % 100 == 0:
+            #    print "\n\tChecking port: ", port
+    return results 
+开发者ID:Neohapsis，项目名称:mptcp-abuse，代码行数:55，代码来源:mptcp_scanner.py
+
+
+示例9: udp_sr1
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def udp_sr1(test_params, udp_test, dtls_wrap=False):
+    """Send UDP test message to server using UDP protocol and parses response."""
+    response = None
+    sent_time = test_params.report_sent_packet()
+    if not dtls_wrap:
+        if test_params.ip_version == 4:
+            udp_test_packet = IP() / UDP() / Raw(udp_test)
+            udp_test_packet[IP].src = test_params.src_endpoint.ip_addr
+            udp_test_packet[IP].dst = test_params.dst_endpoint.ip_addr
+        elif test_params.ip_version == 6:
+            udp_test_packet = IPv6() / UDP() / Raw(udp_test)
+            udp_test_packet[IPv6].src = test_params.src_endpoint.ipv6_addr
+            udp_test_packet[IPv6].dst = test_params.dst_endpoint.ip_addr
+        udp_test_packet[UDP].sport = test_params.src_endpoint.port
+        udp_test_packet[UDP].dport = test_params.dst_endpoint.port
+        del udp_test_packet[UDP].chksum
+        # if test_params.verbose:
+        #     udp_test_packet.show()
+        if test_params.timeout_sec == 0:
+            test_params.timeout_sec = 0.0001
+        response = sr1(
+            udp_test_packet,
+            verbose=test_params.verbose,
+            timeout=test_params.timeout_sec,
+            retry=test_params.nr_retries,
+        )
+        if response:
+            print_verbose(
+                test_params, "Received response - size: {}".format(len(response))
+            )
+            test_params.report_received_packet(sent_time)
+    else:
+        # do_patch()
+        if test_params.ip_version == 4:
+            sock = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
+            sock.connect(
+                (test_params.dst_endpoint.ip_addr, test_params.dst_endpoint.port)
+            )
+            sock.send(udp_test)
+            response = IP() / UDP() / Raw(sock.recv())
+            if response:
+                test_params.report_sent_packet(sent_time)
+
+    #            sock.close()
+    return response 
+开发者ID:Samsung，项目名称:cotopaxi，代码行数:47，代码来源:common_utils.py
+
+
+示例10: cmd_icmp_ping
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def cmd_icmp_ping(ip, interface, count, timeout, wait, verbose):
+    """The classic ping tool that send ICMP echo requests.
+
+    \b
+    # habu.icmp.ping 8.8.8.8
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    IP / ICMP 8.8.8.8 > 192.168.0.5 echo-reply 0 / Padding
+    """
+
+    if interface:
+        conf.iface = interface
+
+    conf.verb = False
+    conf.L3socket=L3RawSocket
+
+    layer3 = IP()
+    layer3.dst = ip
+    layer3.tos = 0
+    layer3.id = 1
+    layer3.flags = 0
+    layer3.frag = 0
+    layer3.ttl = 64
+    layer3.proto = 1 # icmp
+
+    layer4 = ICMP()
+    layer4.type = 8 # echo-request
+    layer4.code = 0
+    layer4.id = 0
+    layer4.seq = 0
+
+    pkt = layer3 / layer4
+
+    counter = 0
+
+    while True:
+        ans = sr1(pkt, timeout=timeout)
+        if ans:
+            if verbose:
+                ans.show()
+            else:
+                print(ans.summary())
+            del(ans)
+        else:
+            print('Timeout')
+
+        counter += 1
+
+        if count != 0 and counter == count:
+            break
+
+        sleep(wait)
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:57，代码来源:cmd_icmp_ping.py
+
+
+示例11: cmd_traceroute
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def cmd_traceroute(ip, port, iface):
+    """TCP traceroute.
+
+    Identify the path to a destination getting the ttl-zero-during-transit messages.
+
+    Note: On the internet, you can have various valid paths to a device.
+
+    Example:
+
+    \b
+    # habu.traceroute 45.77.113.133
+    IP / ICMP 192.168.0.1 > 192.168.0.5 time-exceeded ttl-zero-during-transit / IPerror / TCPerror
+    IP / ICMP 10.242.4.197 > 192.168.0.5 time-exceeded ttl-zero-during-transit / IPerror / TCPerror / Padding
+    IP / ICMP 200.32.127.98 > 192.168.0.5 time-exceeded ttl-zero-during-transit / IPerror / TCPerror / Padding
+    .
+    IP / ICMP 4.16.180.190 > 192.168.0.5 time-exceeded ttl-zero-during-transit / IPerror / TCPerror
+    .
+    IP / TCP 45.77.113.133:http > 192.168.0.5:ftp_data SA / Padding
+
+    Note: It's better if you use a port that is open on the remote system.
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    pkts = IP(dst=ip, ttl=(1, 16)) / TCP(dport=port)
+
+    for pkt in pkts:
+
+        ans = sr1(pkt, timeout=1, iface=conf.iface)
+
+        if not ans:
+            print('.')
+            continue
+
+        print(ans.summary())
+
+        if TCP in ans and ans[TCP].flags == 18:
+            break
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:50，代码来源:cmd_traceroute.py
+
+
+示例12: cmd_tcp_flags
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def cmd_tcp_flags(ip, port, flags, rflags, verbose):
+    """Send TCP packets with different flags and tell what responses receives.
+
+    It can be used to analyze how the different TCP/IP stack implementations
+    and configurations responds to packet with various flag combinations.
+
+    Example:
+
+    \b
+    # habu.tcp_flags www.portantier.com
+    S  -> SA
+    FS -> SA
+    FA -> R
+    SA -> R
+
+    By default, the command sends all possible flag combinations. You can
+    specify which flags must ever be present (reducing the quantity of
+    possible combinations), with the option '-f'.
+
+    Also, you can specify which flags you want to be present on the response
+    packets to show, with the option '-r'.
+
+    With the next command, you see all the possible combinations that have
+    the FIN (F) flag set and generates a response that contains the RST (R)
+    flag.
+
+    Example:
+
+    \b
+    # habu.tcp_flags -f F -r R www.portantier.com
+    FPA  -> R
+    FSPA -> R
+    FAU  -> R
+    """
+
+    conf.verb = False
+
+    pkts = IP(dst=ip) / TCP(flags=(0, 255), dport=port)
+
+    out = "{:>8} -> {:<8}"
+
+    for pkt in pkts:
+        if not flags or all(i in pkt.sprintf(r"%TCP.flags%") for i in flags):
+            ans = sr1(pkt, timeout=0.2)
+            if ans:
+                if not rflags or all(i in ans.sprintf(r"%TCP.flags%") for i in rflags):
+                    print(out.format(pkt.sprintf(r"%TCP.flags%"), ans.sprintf(r"%TCP.flags%")))
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:51，代码来源:cmd_tcp_flags.py
+
+
+示例13: cmd_crack_snmp
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def cmd_crack_snmp(ip, community, port, stop, verbose):
+    """Launches snmp-get queries against an IP, and tells you when
+    finds a valid community string (is a simple SNMP cracker).
+
+    The dictionary used is the distributed with the onesixtyone tool
+    https://github.com/trailofbits/onesixtyone
+
+    Example:
+
+    \b
+    # habu.crack.snmp 179.125.234.210
+    Community found: private
+    Community found: public
+
+    Note: You can also receive messages like \<UNIVERSAL\> \<class
+    'scapy.asn1.asn1.ASN1\_Class\_metaclass'\>, I don't know how to supress
+    them for now.
+    """
+
+    FILEDIR = os.path.dirname(os.path.abspath(__file__))
+    DATADIR = os.path.abspath(os.path.join(FILEDIR, '../data'))
+    COMMFILE = Path(os.path.abspath(os.path.join(DATADIR, 'dict_snmp.txt')))
+
+    if community:
+        communities = [community]
+    else:
+        with COMMFILE.open() as cf:
+            communities = cf.read().split('\n')
+
+    conf.verb = False
+
+    for pkt in IP(dst=ip)/UDP(sport=port, dport=port)/SNMP(community="public", PDU=SNMPget(varbindlist=[SNMPvarbind(oid=ASN1_OID("1.3.6.1"))])):
+
+        if verbose:
+            print(pkt[IP].dst)
+
+        for community in communities:
+
+            if verbose:
+                print('.', end='')
+                sys.stdout.flush()
+
+            pkt[SNMP].community=community
+            ans = sr1(pkt, timeout=0.5, verbose=0)
+
+            if ans and UDP in ans:
+                print('\n{} - Community found: {}'.format(pkt[IP].dst, community))
+                if stop:
+                    break
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:53，代码来源:cmd_crack_snmp.py
+
+
+示例14: cmd_tcp_isn
+​ 点赞 4 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sr1 [as 别名]
+def cmd_tcp_isn(ip, port, count, iface, graph, verbose):
+    """Create TCP connections and print the TCP initial sequence
+    numbers for each one.
+
+    \b
+    $ sudo habu.tcp.isn -c 5 www.portantier.com
+    1962287220
+    1800895007
+    589617930
+    3393793979
+    469428558
+
+    Note: You can get a graphical representation (needs the matplotlib package)
+    using the '-g' option to better understand the randomness.
+    """
+
+    conf.verb = False
+
+    if iface:
+        iface = search_iface(iface)
+        if iface:
+            conf.iface = iface['name']
+        else:
+            logging.error('Interface {} not found. Use habu.interfaces to show valid network interfaces'.format(iface))
+            return False
+
+    isn_values = []
+
+    for _ in range(count):
+        pkt = IP(dst=ip)/TCP(sport=RandShort(), dport=port, flags="S")
+        ans = sr1(pkt, timeout=0.5)
+        if ans:
+            send(IP(dst=ip)/TCP(sport=pkt[TCP].sport, dport=port, ack=ans[TCP].seq + 1, flags='A'))
+            isn_values.append(ans[TCP].seq)
+            if verbose:
+                ans.show2()
+
+    if graph:
+
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            print("To graph support, install matplotlib")
+            return 1
+
+        plt.plot(range(len(isn_values)), isn_values, 'ro')
+        plt.show()
+
+    else:
+
+        for v in isn_values:
+            print(v)
+
+    return True 
+开发者ID:fportantier，项目名称:habu，代码行数:56，代码来源:cmd_tcp_isn.py

@@ -1,0 +1,1 @@
+使用时只要修改 dev = "eth1" 为对应网卡即可，然后命令行 python MacFlood.py

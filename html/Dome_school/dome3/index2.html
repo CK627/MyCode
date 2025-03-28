@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>酒店选择信息</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 50%;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            margin-right: 10px;
+        }
+        .footer {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>表单填写酒店信息</h2>
+    <form>
+        <div class="form-group">
+            <label for="name">姓名：</label>
+            <input type="text" id="name" maxlength="4">
+        </div>
+        <div class="form-group">
+            <label for="password">密码：</label>
+            <input type="text" id="password">
+        </div>
+        <div class="form-group">
+            <label for="destination">目的地：</label>
+            <input type="text" id="destination">
+        </div>
+        <div class="form-group">
+            <label for="checkin">入住时间：</label>
+            <input type="text" id="checkin">
+        </div>
+        <div class="form-group">
+            <label for="checkout">退房时间：</label>
+            <input type="text" id="checkout">
+        </div>
+        <div class="form-group">
+            <label for="location">酒店位置：</label>
+            <select id="location">
+                <option value="closest">最近点</option>
+                <option value="transit">交通枢纽</option>
+                <option value="industrial">行政区</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>酒店价格：</label>
+            <label><input type="checkbox"> 不限</label>
+            <label><input type="checkbox"> 100元以下</label>
+            <label><input type="checkbox"> 100-300元</label>
+            <label><input type="checkbox"> 300-600元</label>
+            <label><input type="checkbox"> 600-1500元</label>
+        </div>
+        <div class="form-group">
+            <label>酒店星级：</label>
+            <label><input type="checkbox"> 不限</label>
+            <label><input type="checkbox"> 五星/豪华</label>
+            <label><input type="checkbox"> 四星/高档</label>
+            <label><input type="checkbox"> 二星/舒适</label>
+        </div>
+        <div class="form-group">
+            <label>主题风格：</label>
+            <label><input type="checkbox"> 不限</label>
+            <label><input type="checkbox"> 客栈</label>
+            <label><input type="checkbox"> 精品酒店</label>
+            <label><input type="checkbox"> 经济酒店</label>
+            <label><input type="checkbox"> 园林酒店</label>
+        </div>
+        <div class="footer">
+            <button type="submit">提交</button>
+            <button type="reset">重置</button>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

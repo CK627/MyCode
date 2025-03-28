@@ -1,0 +1,14 @@
+python-scapy的sniff抓包按照方向过滤
+
+python-scapy是一款非常好用的组包/发包/抓包工具。
+但是sniffer在端口抓包的时候，会将进出的报文都抓。有时候我们只需要抓一个方向，例如入方向的报文。此时可以在原本的filter中加入方向关键字。
+例如:需要只抓tcp的报文，持续抓5秒
+
+>>> pkts = sniff(iface='eth0',filter='tcp',timeout=5)
+那么如果只要抓入方向的报文
+
+>>> pkts = sniff(iface='eth0',filter='inbound and tcp',timeout=5)
+类似的，如果只要抓出方向的报文
+
+>>> pkts = sniff(iface='eth0',filter='outbound and tcp',timeout=5)  
+多数情况下，filter可以参考tcpdump的filter来写。

@@ -1,0 +1,32 @@
+.level_one {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.menu-item {
+    display: inline-block;
+    margin-right: 20px;
+}
+
+.footer-text {
+    background-color: darkseagreen;
+    line-height: 50px;
+    text-align: center;
+}
+
+.level_one ul {
+    display: none;
+    position: absolute;
+    background: #f9f9f9;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.level_one li:hover ul {
+    display: block;
+}
+
+.menu-item {
+    position: relative;
+}

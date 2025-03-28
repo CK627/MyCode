@@ -1,0 +1,22 @@
+hwtype= 0x1（硬件类型）
+ptype= 0x800（协议类型）
+hwlen= 6（硬件地址长度）
+plen= 4（协议地址长度）
+op= who-has（who-has操作，arp查询 ）
+hwsrc= 30:85:a9:a0:ae:9a（源mac地址）
+psrc= 192.168.1.10（源地址）
+hwdst= 00:00:00:00:00:00（目标mac地址）
+pdst= 0.0.0.0（目标地址）
+dst：以太网层目的地址
+src：以太网层源地址，默认填写我们自己网卡的地址
+op：ARP类型（1：请求，2：应答）
+psrc：ARP层源ip地址
+hwsrc：ARP层源mac地址
+pdst：ARP层目的ip地址
+hwdst：ARP层目的mac地址
+Address：主机的IP地址
+Hwtype：主机的硬件类型
+Hwaddress：主机的硬件地址
+Flags Mask：记录标志，"C"表示arp高速缓存中的条目，"M"表示静态的arp条目。
+dport：目的端口
+sport：来源端口

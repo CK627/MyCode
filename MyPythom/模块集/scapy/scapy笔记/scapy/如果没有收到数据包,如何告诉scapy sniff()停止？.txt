@@ -1,0 +1,29 @@
+如果没有收到数据包,如何告诉scapy sniff()停止？
+ 
+如果没有收到数据包,如何告诉scapy sniff()函数停止？
+我正在使用sendp()函数发送数据包
+示例：发送DHCP Discover时未发送任何响应.
+
+最佳答案
+Scapy中的sniff()函数有一个超时参数.您可以在几秒钟内提供超时.
+您可以通过打印嗅探.__ doc__找到其他选项.
+
+rypeck@laptop:~$scapy
+>>> print sniff.__doc__
+Sniff packets
+sniff([count=0,] [prn=None,] [store=1,] [offline=None,] [lfilter=None,] + 
+      L2ListenSocket args) -> list of packets
+  count: number of packets to capture. 0 means infinity
+  store: wether to store sniffed packets or discard them
+    prn: function to apply to each packet. If something is returned,it is displayed. Ex:
+         ex: prn = lambda x: x.summary()
+lfilter: python function applied to each packet to determine
+         if further action may be done
+         ex: lfilter = lambda x: x.haslayer(Padding)
+offline: pcap file to read packets from,instead of sniffing them
+timeout: stop sniffing after a given time (default: None)
+L2socket: use the provided L2socket
+opened_socket: provide an object ready to use .recv() on
+stop_filter: python function applied to each packet to determine
+             if we have to stop the capture after this packet
+             ex: stop_filter = lambda x: x.haslayer(TCP)

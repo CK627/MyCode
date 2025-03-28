@@ -1,0 +1,187 @@
+示例1: run
+​ 点赞 6 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def run(self):
+        """Starts the thread, which is sniffing incoming ARP packets and sends out packets to spoof
+        all clients on the network and the gateway. This packets are sent every __SLEEP seconds.
+
+        Note:
+            First, a ARP request packet is generated for every possible client of the network.
+            This packets are directed at the gateway and update existing entries of the gateway's ARP table.
+            So the gateway is not flooded with entries for non-existing clients.
+
+            Second, a GARP broadcast request packet is generated to spoof every client on the network.
+        """
+        # start sniffing thread
+        self.sniffthread.start()
+
+        # generates a packet for each possible client of the network
+        # these packets update existing entries in the arp table of the gateway
+        # packets = [Ether(dst=self.gate_mac) / ARP(op=1, psrc=str(x), pdst=str(x)) for x in self.ip_range]
+
+        # gratuitous arp to clients
+        # updates the gateway entry of the clients arp table
+        packets = [Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.ipv4.gateway, pdst=self.ipv4.gateway, hwdst=ETHER_BROADCAST)]
+        while True:
+            sendp(packets)
+            time.sleep(self.__SLEEP) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:26，代码来源:daemon_app.py
+
+
+
+ 
+示例2: _arp_scan_thread_helper
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def _arp_scan_thread_helper(self):
+
+        fast_scan_start_ts = None
+
+        while True:
+
+            if not self._host_state.is_inspecting():
+                time.sleep(1)
+                continue
+
+            for ip in utils.get_network_ip_range():
+
+                sleep_time = SLOW_SCAN_SLEEP_TIME
+
+                # Whether we should scan fast or slow
+                with self._host_state.lock:
+                    fast_arp_scan = self._host_state.fast_arp_scan
+
+                # If fast scan, we do it for at most 5 mins
+                if fast_arp_scan:
+                    sleep_time = FAST_SCAN_SLEEP_TIME
+                    if fast_scan_start_ts is None:
+                        fast_scan_start_ts = time.time()
+                    else:
+                        if time.time() - fast_scan_start_ts > 300:
+                            fast_scan_start_ts = None
+                            sleep_time = SLOW_SCAN_SLEEP_TIME
+                            with self._host_state.lock:
+                                self._host_state.fast_arp_scan = False
+
+                time.sleep(sleep_time)
+
+                arp_pkt = sc.Ether(dst="ff:ff:ff:ff:ff:ff") / \
+                    sc.ARP(pdst=ip, hwdst="ff:ff:ff:ff:ff:ff")
+                sc.sendp(arp_pkt, verbose=0)
+
+                with self._lock:
+                    if not self._active:
+                        return 
+开发者ID:noise-lab，项目名称:iot-inspector-client，代码行数:41，代码来源:arp_scan.py
+
+
+示例3: _return_to_normal
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def _return_to_normal(self):
+        """This method is called when the daemon is stopping.
+        First, sends a GARP broadcast request to all clients to tell them the real gateway.
+        Then an ARP request is sent to every client, so that they answer the real gateway and update its ARP cache.
+        """
+        # clients gratutious arp
+        sendp(
+            Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.ipv4.gateway, pdst=self.ipv4.gateway, hwdst=ETHER_BROADCAST,
+                                             hwsrc=self.ipv4.gate_mac))
+        # to clients so that they send and arp reply to the gateway
+        # sendp(Ether(dst=ETHER_BROADCAST) / ARP(op=1, psrc=self.gateway, pdst=str(self.network), hwsrc=self.gate_mac)) 
+开发者ID:usableprivacy，项目名称:upribox，代码行数:13，代码来源:daemon_app.py
+
+
+
+ 
+示例4: process
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def process(self, pkt):
+            if all(layer in pkt for layer in (scapy.Ether, scapy.ARP)):
+                if pkt[scapy.Ether].src != str(net.ifhwaddr(self.iface)) and pkt[scapy.ARP].op == 1: # who-has
+                    resp = scapy.Ether()/scapy.ARP(hwsrc=str(net.ifhwaddr('tap0')), hwdst=pkt.hwsrc, psrc=pkt.pdst, pdst=pkt.psrc, op="is-at")
+                    scapy.sendp(resp, iface='tap0')
+
+                    if pkt.pdst not in self.ips:
+                        self.ips.add(pkt.pdst)
+                        cidr = '{!s}/{:d}'.format(pkt.pdst, 28)
+                        logger.info("Attaching new IP address {:s} to {:s}".format(cidr, self.iface))
+                        subprocess.run(['ip', 'addr', 'add', cidr, 'dev', self.iface]) 
+开发者ID:nategraf，项目名称:Naumachia，代码行数:13，代码来源:scraps.py
+
+
+示例5: send
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def send(data):
+    data = base64.b64encode(data)
+    app_exfiltrate.log_message(
+        'info', "[icmp] Sending {} bytes with ICMP packet".format(len(data)))
+    scapy.sendp(scapy.Ether() /
+                scapy.IP(dst=config['target']) / scapy.ICMP() / data, verbose=0) 
+开发者ID:sensepost，项目名称:DET，代码行数:8，代码来源:icmp.py
+
+
+
+ 
+示例6: send
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def send(self):
+        return sendp(self.data, iface=MONITOR_INTERFACE, verbose=False)
+
+
+# 802.11 frame class with support for adding MSDUs to a single MPDU 
+开发者ID:rpp0，项目名称:aggr-inject，代码行数:7，代码来源:packets.py
+
+
+示例7: rx_from_emulator
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def rx_from_emulator(emu_rx_port, interface):
+    ''' 
+        Receives 0mq messages from emu_rx_port    
+        args:
+            emu_rx_port:  The port number on which to listen for messages from
+                          the emulated software
+    '''
+    global __run_server
+    #global __host_socket
+    topic = "Peripheral.EthernetModel.tx_frame"
+    context = zmq.Context()
+    mq_socket = context.socket(zmq.SUB)
+    mq_socket.connect("tcp://localhost:%s" % emu_rx_port)
+    mq_socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+    while (__run_server):
+        msg = mq_socket.recv_string()
+        # print "Got from emulator:", msg
+        topic, data = decode_zmq_msg(msg)
+        frame = data['frame']
+        # if len(frame) < 64:
+        #    frame = frame +('\x00' * (64-len(frame)))
+        p = scapy.Raw(frame)
+        scapy.sendp(p, iface=interface)
+        # __host_socket.send(frame)
+        print("Sending Frame (%i) on eth: %s" %
+              (len(frame), binascii.hexlify(frame))) 
+开发者ID:embedded-sec，项目名称:halucinator，代码行数:29，代码来源:host_ethernet.py
+
+
+示例8: send_msg
+​ 点赞 5 ​
+# 需要导入模块: from scapy import all [as 别名]
+# 或者: from scapy.all import sendp [as 别名]
+def send_msg(self, topic, msg):
+        frame = msg['frame']
+        p = scapy.Raw(frame)
+        scapy.sendp(p, iface=self.interface) 
+开发者ID:embedded-sec，项目名称:halucinator，代码行数:6，代码来源:ethernet_virt_hub.py

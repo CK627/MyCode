@@ -1,0 +1,505 @@
+sys-系统特定的参数和功能
+该模块提供对解释器使用或维护的一些变量的访问，以及与解释器强烈交互的函数。它始终可用。
+
+sys.argv
+传递给Python脚本的命令行参数列表。argv[0]是脚本名称（依赖于操作系统，无论这是否是完整路径名）。如果使用-c解释器的命令行选项执行命令，argv[0]则将其设置为字符串’-c’。如果没有脚本名称传递给Python解释器，argv[0]则为空字符串。
+
+要循环标准输入或命令行上给出的文件列表，请参阅fileinput模块。
+
+sys.byteorder
+本机字节顺序的指示符。这将具有’big’big-endian（最重要的字节优先）平台和’little’little-endian（最不重要的字节优先）平台的价值。
+
+2.0版本中的新功能
+
+sys.builtin_module_names
+一个字符串元组，给出了编译到此Python解释器中的所有模块的名称。（此信息不以任何其他方式提供 - modules.keys()仅列出导入的模块。）
+
+sys.call_tracing（func，args )
+呼叫func(*args)，同时启用跟踪。跟踪状态被保存，然后恢复。这是从调试器从检查点调用，以递归调试其他一些代码。
+
+sys.copyright
+包含与Python解释器相关的版权的字符串
+
+sys._clear_type_cache（）
+清除内部类型缓存。类型缓存用于加速属性和方法查找。仅在参考泄漏调试期间使用该函数删除不必要的引用。
+
+此功能仅用于内部和专门用途。
+
+版本2.6中的新功能。
+
+sys._current_frames（）
+返回一个字典，将每个线程的标识符映射到调用该函数时该线程中当前活动的最顶层堆栈帧。请注意，traceback模块中的函数可以在给定这样的帧的情况下构建调用堆栈。
+
+这对于调试死锁是最有用的：这个函数不需要死锁线程的协作，只要这些线程的调用堆栈保持死锁，它们就会被冻结。对于非死锁线程返回的帧在调用代码检查帧时可能与该线程的当前活动没有关系。
+
+此功能仅用于内部和专门用途。
+
+2.5版中的新功能。
+
+sys.dllhandle
+
+指定Python DLL句柄的整数。可用性：Windows。
+
+sys.displayhook（值）
+如果值不是None，则此函数sys.stdout将其打印到并保存builtin._。
+
+sys.displayhook调用在 交互式Python会话中输入的表达式的结果。可以通过为其分配另一个单参数函数来自定义这些值的显示sys.displayhook。
+
+sys.dont_write_bytecode
+如果这是真的，Python将不会尝试在源模块的导入上编写.pyc或.pyo文件。此值最初设置为True或 False取决于-B命令行选项和 PYTHONDONTWRITEBYTECODE 环境变量，但您可以自己设置它来控制字节码文件的生成。
+
+版本2.6中的新功能。
+
+sys.excepthook（类型，值，回溯）
+此函数打印出给定的回溯和异常sys.stderr。
+
+当引发异常并且未被捕获时，解释器sys.excepthook使用三个参数调用 ，即异常类，异常实例和回溯对象。在交互式会话中，这发生在控制返回到提示之前; 在Python程序中，这发生在程序退出之前。可以通过为其分配另一个三参数函数来自定义此类顶级异常的处理sys.excepthook。
+
+sys._displayhook_
+sys._excepthook_
+这些对象包含的原始值displayhook，并excepthook 在程序的开始。它们被保存，以便displayhook和 excepthook情况下可以恢复他们碰巧得到破碎的对象替换。
+
+sys.exc_info（）
+此函数返回三个值的元组，这些值提供有关当前正在处理的异常的信息。返回的信息特定于当前线程和当前堆栈帧。如果当前堆栈帧未处理异常，则从调用堆栈帧或其调用者获取信息，依此类推，直到找到正在处理异常的堆栈帧。这里，“处理异常”被定义为“正在执行或已执行except子句。”对于任何堆栈帧，只能访问有关最近处理的异常的信息。
+
+如果堆栈中的任何位置都没有处理异常，None则返回包含三个值的元组 。否则，返回的值是。它们的含义是：type获取正在处理的异常的异常类型（类对象）; value获取异常参数（其 关联值或第二个参数，如果异常类型是类对象，则始终为类实例）; traceback 获取一个回溯对象（参见参考手册），该对象在最初发生异常的位置封装调用堆栈。(type, value, traceback)raise
+
+如果exc_clear()被调用，则此函数将返回三个None值，直到当前线程中引发另一个异常或执行堆栈返回到正在处理另一个异常的帧。
+
+警告： 将回溯返回值分配给处理异常的函数中的局部变量将导致循环引用。这将阻止同一函数中的局部变量或回溯引用的任何内容被垃圾回收。由于大多数函数不需要访问回溯，因此最好的解决方案是使用类似的方法来仅提取异常类型和值。如果确实需要回溯，请确保在使用后删除它（最好使用 … 语句）或调用本身不处理异常的函数。exctype, value = sys.exc_info()[:2]tryfinallyexc_info()
+
+注意 从Python 2.2开始，当启用垃圾收集并且它们变得无法访问时，这些周期会自动回收，但是避免创建周期仍然更有效。
+
+sys.exc_clear（）
+此函数清除与当前线程中发生的当前或最后一个异常相关的所有信息。调用此函数后， exc_info()将返回三个None值，直到在当前线程中引发另一个异常，或者执行堆栈返回到正在处理另一个异常的帧。
+
+仅在少数几个不明显的情况下才需要此功能。这些包括记录有关最后或当前异常的信息的日志记录和错误处理系统。此函数也可用于尝试释放资源并触发对象最终化，但不保证将释放哪些对象（如果有）。
+
+版本2.3中的新功能。
+
+sys.exc_type
+sys.exc_value
+sys.exc_traceback
+
+从版本1.5开始不推荐使用：exc_info()改为使用。
+
+由于它们是全局变量，因此它们并不特定于当前线程，因此在多线程程序中它们的使用并不安全。当没有处理异常时，exc_type设置为None，其他两个未定义。
+
+sys.exec_prefix
+一个字符串，给出了特定于站点的目录前缀，其中安装了与平台相关的Python文件; 默认情况下，这也是’/usr/local’。这可以在构建时使用configure脚本的–exec-prefix参数 进行设置。具体来说，所有配置文件（例如 头文件）都安装在目录中，并且安装了 共享库模块，其中XY 是Python的版本号。pyconfig.hexec_prefix/lib/pythonX.Y/configexec_prefix/lib/pythonX.Y/lib-dynload2.7
+
+sys.executable
+一个字符串，给出Python解释器的可执行二进制文件的绝对路径，在有意义的系统上。如果Python无法检索其可执行文件的真实路径，sys.executable则将为空字符串或None。
+
+sys.exit（[ arg ] ）
+退出Python。这是通过引发SystemExit 异常来实现的，因此遵循finally语句的子句所指定的清理操作try ，并且可以拦截外层的退出尝试。
+
+可选参数arg可以是一个整数，给出退出状态（默认为零）或其他类型的对象。如果它是整数，则零被认为是“成功终止”，并且任何非零值被贝壳等视为“异常终止”。大多数系统要求它在0-127范围内，否则会产生不确定的结果。有些系统具有为特定退出代码指定特定含义的约定，但这些通常是不发达的; Unix程序通常使用2表示命令行语法错误，1表示所有其他类型的错误。如果传递了另一种类型的对象，None则相当于传递零，并且打印任何其他对象stderr并导致退出代码为1.特别是sys.exit(“some error message”) 发生错误时退出程序的快速方法。
+
+由于exit()最终“only”引发了一个异常，它只会在从主线程调用时退出进程，并且异常不会被截获。
+
+sys.exitfunc
+该值实际上不是由模块定义的，但可以由用户（或程序）设置，以指定程序退出时的清理操作。设置时，它应该是无参数功能。解释器退出时将调用此函数。这样只能安装一个功能; 要允许在终止时调用的多个函数，请使用该atexit模块。
+
+注意 当程序被信号杀死，检测到Python致命内部错误或被调用时，不会调用exit函数os._exit()。
+
+从版本2.4开始不推荐使用：atexit改为使用。
+
+sys.flags
+struct sequence 标志公开命令行标志的状态。属性是只读的。
+
+属性	旗
+debug	-d
+py3k_warning	-3
+division_warning	-Q
+division_new -Qnew	
+inspect	-i
+interactive	-i
+optimize	-O 要么 -OO
+dont_write_bytecode	-B
+no_user_site	-s
+no_site	-S
+ignore_environment	-E
+tabcheck	-t 要么 -tt
+verbose	-v
+unicode	-U
+bytes_warning	-b
+hash_randomization	-R
+版本2.6中的新功能。
+
+在新版本2.7.3：该hash_randomization属性。
+
+sys.float_info
+structseq保存有关float类型的信息。它包含有关精度和内部表示的低级信息。这些值对应于float.h’C’编程语言的标准头文件中定义的各种浮点常量; 有关详细信息，请参见1999 ISO / IEC C标准[C99]第5.2.4.2.2节“浮动类型的特性”。
+
+属性	float.h宏	说明
+epsilon	DBL_EPSILON	1和最小值之间的差值大于1，可表示为浮点数
+dig	DBL_DIG	可以在浮点数中忠实表示的最大小数位数; 见下文
+mant_dig	DBL_MANT_DIG	float precision：float radix 的有效位数中的基数
+max	DBL_MAX	最大可表示的有限浮点数
+max_exp	DBL_MAX_EXP	最大整数e，这radix**(e-1)是一个可表示的有限浮点数
+max_10_exp	DBL_MAX_10_EXP	最大整数e，使得10**e它在可表示的有限浮点范围内
+min	DBL_MIN	最小正标准化浮点数
+min_exp	DBL_MIN_EXP	最小整数e，这radix**(e-1)是一个标准化的浮点数
+min_10_exp	DBL_MIN_10_EXP	最小整数e，这10**e是一个标准化的浮点数
+radix	FLT_RADIX	指数表示的基数
+rounds	FLT_ROUNDS	整数常量，表示用于算术运算的舍入模式。这反映了解释器启动时系统FLT_ROUNDS宏的值。有关可能
+该属性sys.float_info.dig需要进一步解释。如果 s任何字符串表示具有最多sys.float_info.dig有效数字的十进制 数字，则转换s为float并再次返回将恢复表示相同十进制值的字符串：
+
+>>> import sys
+>>> sys.float_info.dig
+15
+>>> s = '3.14159265358979'    # decimal string with 15 significant digits
+>>> format(float(s), '.15g')  # convert to float and back -> same value
+'3.14159265358979'
+1
+2
+3
+4
+5
+6
+但对于具有多位sys.float_info.dig有效数字的字符串，并非总是如此：
+
+>>> s = '9876543211234567'    # 16 significant digits is too many!
+>>> format(float(s), '.16g')  # conversion changes value
+'9876543211234568'
+1
+2
+3
+版本2.6中的新功能。
+
+sys.float_repr_style
+一个字符串，指示repr()函数对浮点数的行为方式。如果字符串具有值，’short’则对于有限浮点数x，repr(x)旨在生成具有该属性的短字符串。这是Python 2.7及更高版本中的常见行为。否则，其值 和行为方式与2.7之前的Python版本相同。float(repr(x)) == xfloat_repr_style’legacy’repr(x)
+
+版本2.7中的新功能。
+
+sys.getcheckinterval（）
+返回口译员的“检查间隔”; 看setcheckinterval()。
+
+版本2.3中的新功能。
+
+sys.getdefaultencoding（）
+返回Unicode实现使用的当前默认字符串编码的名称。
+
+2.0版中的新功能。
+
+sys.getdlopenflags（）
+返回用于dlopen()调用的标志的当前值。标志常量在dl和DLFCN模块中定义。可用性：Unix。
+
+版本2.2中的新功能。
+
+sys.getfilesystemencoding（）
+返回用于将Unicode文件名转换为系统文件名的None编码名称，或者是否使用系统默认编码。结果值取决于操作系统：
+
+在Mac OS X上，编码是’utf-8’。
+在Unix上，根据nl_langinfo（CODESET）的结果，或者None如果nl_langinfo(CODESET) 失败，编码是用户的首选项。
+在Windows NT +上，文件名本身是Unicode，因此不执行任何转换。getfilesystemencoding()仍然返回’mbcs’，因为这是应用程序在明确要将Unicode字符串转换为用作文件名时等效的字节字符串时应使用的编码。
+在Windows 9x上，编码是’mbcs’。
+版本2.3中的新功能。
+
+sys.getrefcount（对象）
+返回对象的引用计数。返回的计数通常比您预期的高一个，因为它包含（临时）引用作为参数getrefcount()。
+
+sys.getrecursionlimit（）
+返回递归限制的当前值，即Python解释器堆栈的最大深度。此限制可防止无限递归导致C堆栈溢出并导致Python崩溃。它可以设置 setrecursionlimit()。
+
+sys.getsizeof（对象[，默认] ）
+以字节为单位返回对象的大小。对象可以是任何类型的对象。所有内置对象都将返回正确的结果，但这不一定适用于第三方扩展，因为它是特定于实现的。
+
+如果给定，则如果对象未提供检索大小的方法，则将返回default。否则TypeError将被提出。
+
+getsizeof()sizeof如果对象由垃圾收集器管理，则调用该对象的方法并添加额外的垃圾收集器开销。
+
+版本2.6中的新功能。
+
+sys._getframe（[ 深度] ）
+从调用堆栈返回一个框架对象。如果给出了可选的整数深度，则返回堆栈顶部下方多次调用的帧对象。如果它比调用堆栈更深，ValueError则引发。深度的默认值为零，返回调用堆栈顶部的帧。
+
+CPython实现细节：此函数仅用于内部和专用目的。并不保证在Python的所有实现中都存在。
+
+sys.getprofile（）
+获取设置的探查器功能setprofile()。
+
+版本2.6中的新功能。
+
+sys.gettrace（）
+获取设置的跟踪功能settrace()。
+
+CPython实现细节：该gettrace()函数仅用于实现调试器，分析器，覆盖工具等。它的行为是实现平台的一部分，而不是语言定义的一部分，因此可能并非在所有Python实现中都可用。
+
+版本2.6中的新功能。
+
+sys.getwindowsversion（）
+返回一个描述当前正在运行的Windows版本的命名元组。命名元素是major，minor， build，platform，service_pack，service_pack_minor， service_pack_major，suite_mask和product_type。 service_pack包含一个字符串，而所有其他值都是整数。组件也可以通过名称访问，因此 sys.getwindowsversion()[0]相当于 sys.getwindowsversion().major。为了与先前版本兼容，只能通过索引检索前5个元素。
+
+平台可能是以下值之一：
+
+不变	平台
+0 (VER_PLATFORM_WIN32s)	Windows 3.1上的Win32s
+1 (VER_PLATFORM_WIN32_WINDOWS)	Windows 95/98 / ME
+2 (VER_PLATFORM_WIN32_NT)	Windows NT / 2000 / XP / x64
+3 (VER_PLATFORM_WIN32_CE)	Windows CE
+product_type可能是以下值之一：
+
+不变	含义
+1 (VER_NT_WORKSTATION)	该系统是一个工作站。
+2 (VER_NT_DOMAIN_CONTROLLER)	该系统是域控制器。
+3 (VER_NT_SERVER)	系统是服务器，但不是域控制器。
+这个函数包装了Win32 GetVersionEx()函数; OSVERSIONINFOEX()有关这些字段的详细信息，请参阅Microsoft文档。
+
+可用性：Windows。
+
+版本2.3中的新功能。
+
+在2.7版中更改：更改为命名元组并添加了service_pack_minor， service_pack_major，suite_mask和product_type。
+
+sys.hexversion
+版本号编码为单个整数。每个版本都保证会增加，包括对非生产版本的适当支持。例如，要测试Python解释器至少是1.5.2版，请使用：
+
+if sys.hexversion >= 0x010502F0:
+    # use some advanced feature
+    ...
+else:
+    # use an alternative implementation or warn the user
+    ...
+1
+2
+3
+4
+5
+6
+这被调用，hexversion因为它只是在将其作为将其传递给内置hex()函数的结果时才真正看起来有意义。该 version_info值可以用于对人工友好的相同信息的编码。
+
+这hexversion是一个32位数字，具有以下布局：
+
+比特（大端序）	含义
+1-8	PY_MAJOR_VERSION （2在 2.1.0a3）
+9-16	PY_MINOR_VERSION （1在 2.1.0a3）
+17-24	PY_MICRO_VERSION （0在 2.1.0a3）
+25-28	PY_RELEASE_LEVEL （0xA用于alpha， 0xB用于beta，0xC用于候选发布版和0xF最终版）
+29-32	PY_RELEASE_SERIAL （在3中 2.1.0a3，零为最终释放）
+因此2.1.0a3是hexversion 0x020100a3。
+
+1.5.2版中的新功能。
+
+sys.long_info
+一个结构序列，包含有关Python内部整数表示的信息。属性是只读的。
+
+属性	说明
+bits_per_digit	每个数字中保持的位数。Python整数存储在base的内部 2**long_info.bits_per_digit
+sizeof_digit	用于表示数字的C类型的字节大小
+版本2.7中的新功能。
+
+sys.last_type
+sys.last_value
+sys.last_traceback
+这三个变量并不总是定义的; 它们在未处理异常时设置，并且解释器打印错误消息和堆栈回溯。它们的用途是允许交互式用户导入调试器模块并进行事后调试，而无需重新执行导致错误的命令。（典型用法是进入事后调试器; 有关详细信息，请参阅pdb一章- Python调试器。）import pdb; pdb.pm()
+
+变量的含义与exc_info()上面的返回值相同 。（由于只有一个交互式线程，因此线程安全性不是这些变量的关注点，不像exc_type 等等）
+
+sys.maxint
+Python常规整数类型支持的最大正整数。这至少是2 ** 31-1。最大的负整数是-maxint-1- 使用2的补码二进制算法产生的不对称性。
+
+sys.maxsize
+平台的Py_ssize_t类型支持的最大正整数，因此最大大小的列表，字符串，dicts和许多其他容器都可以。
+
+sys.maxunicode
+一个整数，表示Unicode字符支持的最大代码点。其值取决于配置选项，该选项指定Unicode字符是存储为UCS-2还是UCS-4。
+
+sys.meta_path
+调用其方法的finder对象列表，find_module()以查看其中一个对象是否可以找到要导入的模块。find_module()至少使用要导入的模块的绝对名称调用该方法。如果要导入的模块包含在包中，则父包的path属性作为第二个参数传入。None如果找不到模块，则返回该方法，否则返回加载器。
+
+sys.meta_path在任何隐式默认查找器或之前搜索 sys.path。
+
+看到 PEP 302用于原始规范。
+
+sys.modules
+这是一个将模块名称映射到已加载的模块的字典。这可以被操纵以强制重新加载模块和其他技巧。注意，从本字典移除模块是不与调用 reload()相应的模块对象上。
+
+sys.path
+一个字符串列表，指定模块的搜索路径。从环境变量初始化PYTHONPATH，加上依赖于安装的默认值。
+
+在程序启动时初始化时，此列表的第一项path[0]是包含用于调用Python解释器的脚本的目录。如果脚本目录不可用（例如，如果以交互方式调用解释器或者从标准输入读取脚本）， path[0]则是空字符串，它指示Python首先搜索当前目录中的模块。请注意，脚本目录是在插入 条目之前插入的PYTHONPATH。
+
+程序可以自行修改此列表。
+
+在版本2.3中更改：不再忽略Unicode字符串。
+
+sys.path_hooks
+一个callables列表，它采用path参数来尝试为路径创建 finder。如果可以创建一个查找程序，它将由callable返回，否则加注ImportError。
+
+最初指定于 PEP 302。
+
+sys.path_importer_cache
+充当查找程序对象缓存的字典。键是已传递到的路径，sys.path_hooks值是找到的查找程序。如果路径是有效的文件系统路径但未找到显式查找器，sys.path_hooks则None存储表示应使用隐式默认查找器。如果路径不是现有路径，则imp.NullImporter设置。
+
+最初指定于 PEP 302。
+
+sys.platform
+例如，该字符串包含一个平台标识符，可用于附加特定于平台的组件sys.path。
+
+对于大多数Unix系统，这是由附加返回的版本的第一部分返回的小写OS名称，例如，在构建Python时。除非您要测试特定的系统版本，否则建议使用以下习惯用法：uname -suname -r’sunos5’
+
+if sys.platform.startswith('freebsd'):
+    # FreeBSD-specific code here...
+elif sys.platform.startswith('linux'):
+    # Linux-specific code here...
+1
+2
+3
+4
+版本2.7.3中更改：由于大量代码检查，并且Linux 2.x和3.x之间没有必要的更改，因此即使在Linux 3.x上也始终设置为。在Python 3.3及更高版本中，该值将始终设置为，因此建议始终使用上面提到的习语。sys.platform == ‘linux2’sys.platform’linux2”linux’startswith
+
+对于其他系统，值为：
+
+系统	platform值
+Linux（2.x 和 3.x）	‘linux2’
+视窗	‘win32’
+在Windows / Cygwin的	‘cygwin’
+Mac OS X.	‘darwin’
+OS / 2	‘os2’
+OS / 2 EMX	‘os2emx’
+里斯科斯	‘riscos’
+AtheOS	‘atheos’
+也可以看看 os.name具有更粗糙的粒度。 os.uname()提供依赖于系统的版本信息。
+该platform模块提供系统身份的详细检查。
+
+sys.prefix
+一个字符串，给出了特定于站点的目录前缀，其中安装了与平台无关的Python文件; 默认情况下，这是字符串 ‘/usr/local’。这可以在构建时使用configure脚本的–prefix 参数进行设置。Python库模块的主要集合安装在目录中， 而平台独立的头文件（所有除外）存储在其中，其中XY是例如Python的版本号。prefix/lib/pythonX.Ypyconfig.hprefix/include/pythonX.Y2.7
+
+sys.ps1
+sys.ps2
+指定解释器的主要和辅助提示的字符串。仅在解释器处于交互模式时才定义这些。在这种情况下，它们的初始值是和。如果将非字符串对象分配给任一变量，则每次解释器准备读取新的交互式命令时都会重新评估该变量。这可以用来实现动态提示。’>>> ”… ‘str()
+
+sys.py3kwarning
+Bool包含Python 3警告标志的状态。这True 是使用-3选项启动Python 的时候。（这应该被认为是只读的;将其设置为不同的值对Python 3警告没有影响。）
+
+版本2.6中的新功能。
+
+sys.setcheckinterval（间隔）
+设置解释器的“检查间隔”。此整数值确定解释器检查周期性事物（如线程切换和信号处理程序）的频率。默认值是100，意味着每100条Python虚拟指令执行一次检查。将其设置为更大的值可能会提高使用线程的程序的性能。将其设置为值<=0将检查每个虚拟指令，从而最大限度地提高响应速度和开销。
+
+sys.setdefaultencoding（名字）
+设置Unicode实现使用的当前默认字符串编码。如果 name与任何可用编码不匹配，LookupError则引发。此功能仅供site模块实现使用，并在需要时由sitecustomize。一旦 site模块使用，它就会从sys模块的命名空间中删除。
+
+2.0版中的新功能。
+
+sys.setdlopenflags（n ）
+设置解释器用于dlopen()调用的标志，例如解释器加载扩展模块时。除此之外，这将在导入模块时启用符号的惰性解析（如果被称为） sys.setdlopenflags(0)。要在扩展模块之间共享符号，请调用 。标志模块的符号名称可以在模块中找到，也可以在模块中找到 。如果不可用，则可以使用h2py脚本生成它 。可用性：Unix。sys.setdlopenflags(dl.RTLD_NOW | dl.RTLD_GLOBAL)dlDLFCNDLFCN/usr/include/dlfcn.h
+
+版本2.2中的新功能。
+
+sys.setprofile（profilefunc ）
+设置系统的配置文件功能，允许您在Py​​thon中实现Python源代码分析器。有关Python探查器的更多信息，请参阅Python Profilers一章。系统的配置文件函数的调用类似于系统的跟踪函数（请参阅参考资料settrace()），但是它使用不同的事件进行调用，例如，不会为每个执行的代码行调用它（仅在调用和返回时调用它，但会报告返回事件即使设置了异常）。该函数是特定于线程的，但是探查器无法知道线程之间的上下文切换，因此在存在多个线程时使用它是没有意义的。此外，它的返回值没有使用，所以它可以简单地返回None。
+
+配置文件函数应该有三个参数：frame，event和 arg。frame是当前的堆栈帧。 事件是一个字符串：’call’， ‘return’，’c_call’，’c_return’，或’c_exception’。arg取决于事件类型。
+
+事件具有以下含义：
+
+'call'
+    调用一个函数（或输入一些其他代码块）。调用配置文件功能; arg是None。
+'return'
+    函数（或其他代码块）即将返回。调用配置文件功能; arg是将返回的值，或者None 事件是由引发的异常引起的。
+'c_call'
+    AC功能即将被调用。这可以是扩展功能或内置功能。 arg是C函数对象。
+'c_return'
+AC功能已返回。arg是C函数对象。
+'c_exception'
+AC功能引发了异常。 arg是C函数对象。
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+sys.setrecursionlimit（限制）
+设置Python解释器堆栈的最大深度以限制。此限制可防止无限递归导致C堆栈溢出并导致Python崩溃。
+
+最高可能的限制取决于平台。当用户需要深度递归的程序和支持更高限制的平台时，用户可能需要设置更高的限制。这应该小心，因为太高的限制可能导致崩溃。
+
+sys.settrace（tracefunc ）
+设置系统的跟踪功能，允许您在Py​​thon中实现Python源代码调试器。该函数是特定于线程的; 对于支持多线程的调试器，必须settrace()为每个正在调试的线程注册它 。
+
+跟踪函数应该有三个参数：frame，event和 arg。frame是当前的堆栈帧。 事件是一个字符串：’call’， ‘line’，’return’或’exception’。 arg取决于事件类型。
+
+每当输入新的本地范围时，都会调用跟踪函数（事件设置为’call’）; 它应该返回对该范围使用的本地跟踪函数的引用，或者None是否应该跟踪范围。
+
+本地跟踪函数应该返回对自身的引用（或者返回另一个函数以便在该范围内进一步跟踪），或者None关闭该范围内的跟踪。
+
+事件具有以下含义：
+
+'call'
+调用一个函数（或输入一些其他代码块）。调用全局跟踪函数; arg是None; 返回值指定本地跟踪功能。
+'line'
+解释器即将执行新的代码行或重新执行循环的条件。调用本地跟踪功能; arg是 None; 返回值指定新的本地跟踪功能。有关Objects/lnotab_notes.txt其工作原理的详细说明，请参阅 。
+'return'
+函数（或其他代码块）即将返回。调用本地跟踪功能; arg是将返回的值，或者None 事件是由引发的异常引起的。跟踪函数的返回值被忽略。
+'exception'
+发生了一个例外。调用本地跟踪功能; arg是一个元组; 返回值指定新的本地跟踪功能。(exception, value, traceback)
+1
+2
+3
+4
+5
+6
+7
+8
+请注意，由于异常沿着调用者链向下传播，因此’exception’会在每个级别生成一个 事件。
+
+有关代码和框架对象的更多信息，请参阅标准类型层次结构。
+
+CPython实现细节：该settrace()函数仅用于实现调试器，分析器，覆盖工具等。它的行为是实现平台的一部分，而不是语言定义的一部分，因此可能并非在所有Python实现中都可用。
+
+sys.settscdump（on_flag ）
+如果on_flag为true ，则使用Pentium时间戳计数器激活VM测量的转储 。如果on_flag关闭，请停用这些转储。只有在编译Python时，该函数才可用–with-tsc。要了解此转储的输出，请阅读Python/ceval.cPython源代码。
+
+版本2.4中的新功能。
+
+CPython实现细节：此函数与CPython实现细节密切相关，因此不太可能在其他地方实现。
+
+sys.stdin
+sys.stdout
+sys.stderr
+与解释器的标准输入，输出和错误流相对应的文件对象。 stdin用于除脚本之外的所有解释器输入，但包括对input()和的调用raw_input()。 stdout用于输出print和表达语句和用于提示input()和raw_input()。解释器自己的提示和（几乎所有）其错误消息都会转到stderr。 stdout并且 stderr不需要是内置文件对象：任何对象都是可接受的，只要它有一个write()带字符串参数的方法即可。（改变这些对象不影响标准的由执行的处理I / O流 os.popen()，os.system()或所述exec*()的函数家族os模块。）
+
+sys._stdin_
+sys._stdout_
+sys._stderr_
+这些对象包含的原始值stdin，stderr并 stdout在程序的开始。它们在最终确定期间使用，无论sys.std*对象是否已被重定向，它都可用于打印到实际的标准流 。
+
+它还可以用于将实际文件还原到已知的工作文件对象，以防它们被破坏的对象覆盖。但是，执行此操作的首选方法是在替换之前显式保存先前的流，并还原已保存的对象。
+
+sys.subversion
+表示Python解释器的Subversion信息的三元组（repo，branch，version）。repo是存储库的名称’CPython’。 branch是一个表单的字符串’trunk’，’branches/name’或 ‘tags/name’。如果解释器是从Subversion结帐构建的，则version是输出svnversion; 它包含修订号（范围），如果有本地修改，可能包含尾随’M’。如果树被导出（或者svnversion不可用），那么它是Include/patchlevel.h分支是标记的修订版 。否则就是None。
+
+2.5版中的新功能。
+
+注意 Python现在使用Mercurial 开发。因此，在最近的Python 2.7 bugfix版本中，subversion 包含占位符信息。它在Python 3.3中被删除。
+
+sys.tracebacklimit
+当此变量设置为整数值时，它确定发生未处理的异常时打印的最大回溯信息级别数。默认是1000。设置为0或更小时，将抑制所有回溯信息，并仅打印异常类型和值。
+
+sys.version
+一个字符串，包含Python解释器的版本号以及有关使用的内部版本号和编译器的附加信息。启动交互式解释器时会显示此字符串。不要从中提取版本信息，而是使用模块version_info提供的功能 platform。
+
+sys.api_version
+此解释器的C API版本。在调试Python和扩展模块之间的版本冲突时，程序员可能会发现这很有用。
+
+版本2.3中的新功能。
+
+sys.version_info
+包含版本号的五个组件的元组：major，minor， micro，releaselevel和serial。除releaselevel之外的所有值都是整数; 释放水平’alpha’，’beta’，’candidate’，或 ‘final’。version_info对应于Python 2.0版的值是。组件也可以通过名称访问，因此等同于 等等。(2, 0, 0, ‘final’, 0)sys.version_info[0]sys.version_info.major
+
+2.0版中的新功能。
+
+在2.7版中更改：添加了命名组件属性
+
+sys.warnoptions
+这是警告框架的实现细节; 不要修改此值。warnings有关警告框架的更多信息，请参阅该模块。
+
+sys.winver
+用于在Windows平台上形成注册表项的版本号。它作为字符串资源1000存储在Python DLL中。该值通常是前三个字符version。它在sys 模块中提供，用于提供信息; 修改此值对Python使用的注册表项没有影响。可用性：Windows。

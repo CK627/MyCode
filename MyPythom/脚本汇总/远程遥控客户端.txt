@@ -1,0 +1,9 @@
+import socket
+while True:
+	line = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	line.connect(('192.168.1.1',23333))
+	msg = str(raw_input('please input commd:' ))
+	line.send(str(msg).encode('utf-8'))
+	data=line.resv(10037)
+	print data
+	line.close()
